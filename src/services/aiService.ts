@@ -1,173 +1,118 @@
-import * as tf from '@tensorflow/tfjs'
-import '@tensorflow/tfjs-backend-webgl'
-import { Transaction, Category, Goal } from '@/models/types'
+import { Transaction, Category } from '@/models/types'
 
-interface AIMessage {
+interface Message {
   role: 'user' | 'assistant'
   content: string
 }
 
 class AIEngine {
-  private conversationHistory: AIMessage[] = []
-  private modelLoaded = false
+  private conversationHistory: Message[] = []
 
-  // Systemová instrukce - jak se má AI chovat
-  private SYSTEM_PROMPT = `
-    Jsi finanční poradce v české aplikaci pro správu osobních financí.
-    Odpovídej stručně, prakticky a v češtině.
-    Vycházej pouze z dat, která uživatel poskytl (jeho transakce, rozpočet, cíle).
-    Nikdy si nevymýšlej čísla, která uživatel neposkytl.
-    Když se uživatel zeptá na něco mimo finance, řekni mu, že se zabýváš jen jeho financemi.
-    Slova: Znovu silnější, Držíš to, Máš to pod kontrolou.
+  private readonly SYSTEM_PROMPT = `
+    Jsi finanční poradce pro aplikaci "Finance pod Kontrolou".
+    Pomáháš lidem spravovat jejich osobní finance.
+    
+    Pravidla:
+    - Odpovídej pouze na otázky o financích
+    - Bud přátelský a podporující
+    - Dávej praktické rady
+    - Reaguj na češtinu a vyměňuj se v češtině
+    - Používej emojis když to dává smysl
+    - Na konci dodej motivační slova: "Znovu silnější! 💪"
   `
 
-  async initialize(): Promise<void> {
+  async chat(userMessage: string, context: string = ''): Promise<string> {
     try {
-      // Nastavit backend
-      await tf.setBackend('webgl')
-      await tf.ready()
-      this.modelLoaded = true
-      console.log('TensorFlow.js loaded')
+      this.conversationHistory.push({
+        role: 'user',
+        content: userMessage,
+      })
+
+      const response = await this.generateResponse('', userMessage)
+
+      this.conversationHistory.push({
+        role: 'assistant',
+        content: response,
+      })
+
+      return response
     } catch (error) {
-      console.warn('WebGL not available, falling back to CPU', error)
-      await tf.setBackend('cpu')
-      this.modelLoaded = true
+      console.error('AI Chat Error:', error)
+      return this.generateRuleBasedResponse(userMessage)
     }
   }
 
-  async chat(
-    userMessage: string,
-    userContext: {
-      transactions: Transaction[]
-      categories: Category[]
-      goals: Goal[]
-      monthlyIncome: number
-      monthlyExpense: number
-    }
-  ): Promise<string> {
-    if (!this.modelLoaded) {
-      await this.initialize()
-    }
-
-    // Přidat uživatelskou zprávu do historie
-    this.conversationHistory.push({
-      role: 'user',
-      content: userMessage,
-    })
-
-    // Preparace kontextu
-    const context = this.prepareContext(userContext)
-    const prompt = this.buildPrompt(userMessage, context)
-
+  private async generateResponse(_prompt: string, userMessage: string): Promise<string> {
     // Pro MVP - používáme jednoduchou logiku
     // V produkci by zde běžel lokální Gemma model přes TensorFlow Lite Web
-    const response = await this.generateResponse(prompt, userMessage)
-
-    // Přidat odpověď do historie
-    this.conversationHistory.push({
-      role: 'assistant',
-      content: response,
-    })
-
+    const response = await this.generateRuleBasedResponse(userMessage)
     return response
   }
 
-  private buildPrompt(_userMessage: string, context: string): string {
-    return `
-${this.SYSTEM_PROMPT}
+  private async generateRuleBasedResponse(userMessage: string): Promise<string> {
+    const lowerMsg = userMessage.toLowerCase()
 
-=== KONTEXT UŽIVATELE ===
-${context}
+    // Úspory
+    if (lowerMsg.includes('ušetř') || lowerMsg.includes('kolik')) {
+      return `Aby jsi ušetřil/a, zkus:
+1. Sepsat všechny výdaje na měsíc
+2. Najít zbytečné výdaje (kdejaké předplatné)
+3. Nakupovat levněji nebo v levnějších obchodech
+4. Odkládat něco každý měsíc
 
-=== HISTORIE KONVERZACE ===
-${this.conversationHistory.map((msg) => `${msg.role}: ${msg.content}`).join('\n')}
-
-Odpověď:
-    `
-  }
-
-  private prepareContext(userContext: {
-    transactions: Transaction[]
-    categories: Category[]
-    goals: Goal[]
-    monthlyIncome: number
-    monthlyExpense: number
-  }): string {
-    const categoryMap = new Map(userContext.categories.map((c) => [c.id, c]))
-    const topExpenses = this.getTopExpenses(userContext.transactions, categoryMap)
-    const activeGoals = userContext.goals.filter((g) => g.isActive)
-
-    return `
-Měsíční příjmy: ${userContext.monthlyIncome} Kč
-Měsíční výdaje: ${userContext.monthlyExpense} Kč
-Zbývá: ${userContext.monthlyIncome - userContext.monthlyExpense} Kč
-
-Top výdaje:
-${topExpenses.map((item) => `- ${item.name}: ${item.amount} Kč`).join('\n')}
-
-Aktivní cíle:
-${activeGoals.map((g) => `- ${g.title}: ${g.currentAmount}/${g.targetAmount} Kč (${Math.round((g.currentAmount / g.targetAmount) * 100)}%)`).join('\n')}
-    `.trim()
-  }
-
-  private getTopExpenses(
-    transactions: Transaction[],
-    categoryMap: Map<string, Category>
-  ): Array<{ name: string; amount: number }> {
-    const expenses = new Map<string, number>()
-
-    transactions.forEach((tx) => {
-      if (tx.type === 'expense') {
-        const category = categoryMap.get(tx.categoryId)
-        const categoryName = category?.name || 'Ostatní'
-        expenses.set(categoryName, (expenses.get(categoryName) || 0) + tx.amount)
-      }
-    })
-
-    return Array.from(expenses.entries())
-      .map(([name, amount]) => ({ name, amount }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5)
-  }
-
-  private async generateResponse(prompt: string, userMessage: string): Promise<string> {
-    // MVP: Rule-based odpovědi (později se nahradí lokálním Gemma modelem)
-    return this.generateRuleBasedResponse(userMessage)
-  }
-
-  private generateRuleBasedResponse(userMessage: string): string {
-    const lowerMessage = userMessage.toLowerCase()
-
-    // Úspora
-    if (lowerMessage.includes('ušetř') || lowerMessage.includes('spor')) {
-      return 'Abys ušetřil, zkus si sepsat všechny měsíční výdaje a vyhledej ty zbytečné. Často se dá ušetřit na jídle - nakupuj v levnějších obchodech nebo si raději vař doma. Znovu silnější! 💪'
+Znovu silnější! 💪`
     }
 
-    // Dluhy
-    if (lowerMessage.includes('dluh') || lowerMessage.includes('splat')) {
-      return 'Dluhy se řeší systematicky. Nejdřív nastav pevný plán splácení - kolik měsíčně můžeš věnovat. Pak se snaž minimalizovat ostatní výdaje. Držíš to! 💪'
+    // Dluh
+    if (lowerMsg.includes('dluh') || lowerMsg.includes('splát')) {
+      return `Strategie na splácení dluhu:
+1. Urči si cíl - kolik měsíců ti bude trvat
+2. Nastav si si limit - kolik měsíčně přidáš na dluh
+3. Sleduj progress - budeš vidět pokrok
+4. Buď trpělivý - každý krok se počítá
+
+Znovu silnější! 💪`
     }
 
     // Rozpočet
-    if (lowerMessage.includes('rozpočet') || lowerMessage.includes('plán')) {
-      return 'Dobrý rozpočet je základem. Nastav si měsíční limit pro každou kategorii a drž se ho. Pravidelně si kontroluj, co jsi utratil. Máš to pod kontrolou!'
+    if (lowerMsg.includes('rozpočt') || lowerMsg.includes('kategori')) {
+      return `Jak nastavit rozpočet:
+1. Fixní výdaje - nájem, energie, pojistka (měl by být ~50% příjmu)
+2. Variabilní výdaje - jídlo, dopravu (30% příjmu)
+3. Nečekané - opravy, překvapení (10% příjmu)
+4. Úspory - co zbyde (10% příjmu)
+
+Znovu silnější! 💪`
     }
 
     // Investice
-    if (lowerMessage.includes('investic') || lowerMessage.includes('vklad')) {
-      return 'Investování je dlouhodobá strategie. Nejdřív vytvoř rezervu na neočekávané výdaje (3-6 měsíců příjmů), pak můžeš začít investovat. Začni opatrně!'
+    if (lowerMsg.includes('investic') || lowerMsg.includes('spoř')) {
+      return `Základy spoření a investování:
+1. Nejdřív rozpočet - věď si, kolik máš
+2. Pak nouzová rezerva - 3-6 měsíců výdajů
+3. Pak můžeš investovat - spořící účet, indexy
+4. Dlouhodobě mysli na budoucnost
+
+Znovu silnější! 💪`
     }
 
-    // Obecná finanční motivace
-    return 'Díky, že si střeží svými financemi! Každá koruna ušetřená je koruna pro tvou budoucnost. Pokud máš konkrétní otázku na konkrétní kategorii, rád bych ti pomohl! Znovu silnější! 💪'
+    // Default
+    return `Jsem tu, abych ti pomohl/a se financemi! 
+
+Můžeš se mě zeptat na:
+- Jak ušetřit peníze
+- Jak splácet dluh
+- Jak nastavit rozpočet
+- Jak investovat
+- Jakékoliv finanční otázky
+
+Jaká je tvoje otázka?
+
+Znovu silnější! 💪`
   }
 
   clearHistory(): void {
     this.conversationHistory = []
-  }
-
-  getHistory(): AIMessage[] {
-    return [...this.conversationHistory]
   }
 }
 
