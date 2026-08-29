@@ -15,7 +15,7 @@ class GemmaService {
       this.isLoading = true
       console.log('🤖 Inicializuji Gemmu přes CDN...')
 
-      // Načtení přímo přes ESM CDN – obchází veškeré chyby Vite a Rollupu při buildu
+      // @ts-ignore
       const { pipeline, env } = await import(
         'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.1.0'
       )
