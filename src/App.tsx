@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { auth } from '@/services/firebase'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { colors, spacing } from '@/theme/colors'
 import { useAppStore } from '@/store/appStore'
-import LoginScreen from '@/pages/LoginScreen'
-import Dashboard from '@/pages/Dashboard'
+import { LoginScreen } from '@/pages/LoginScreen'
+import { Dashboard } from '@/pages/Dashboard'
 import AddTransaction from '@/pages/AddTransaction'
-import ChatScreen from '@/pages/ChatScreen'
-import HistoryScreen from '@/pages/HistoryScreen'
+import { ChatScreen } from '@/pages/ChatScreen'
+import { HistoryScreen } from '@/pages/HistoryScreen'
 import ChartsScreen from '@/pages/ChartsScreen'
-import GoalsScreen from '@/pages/GoalsScreen'
-import InvestmentsScreen from '@/pages/InvestmentsScreen'
-import SettingsScreen from '@/pages/SettingsScreen'
+import { GoalsScreen } from '@/pages/GoalsScreen'
+import { InvestmentsScreen } from '@/pages/InvestmentsScreen'
+import { SettingsScreen } from '@/pages/SettingsScreen'
 
 type Page =
   | 'login'
@@ -38,7 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'investments', icon: '💰', label: 'Spoření' },
 ]
 
-function App() {
+export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('login')
   const [isLoading, setIsLoading] = useState(true)
 
@@ -50,7 +50,7 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
         setUser({
-          id: currentUser.uid,
+          uid: currentUser.uid,
           email: currentUser.email || '',
           displayName: currentUser.displayName || 'Uživatel',
         })
@@ -72,6 +72,10 @@ function App() {
     } catch (error) {
       console.error('Logout error:', error)
     }
+  }
+
+  const navigateHandler = (page: string) => {
+    setCurrentPage(page as Page)
   }
 
   const renderPage = () => {
@@ -98,23 +102,23 @@ function App() {
 
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard onNavigate={(page: Page) => setCurrentPage(page as Page)} />
+        return <Dashboard onNavigate={navigateHandler} />
       case 'add-transaction':
-        return <AddTransaction onNavigate={setCurrentPage} />
+        return <AddTransaction onNavigate={navigateHandler} />
       case 'chat':
-        return <ChatScreen onNavigate={setCurrentPage} />
+        return <ChatScreen onNavigate={navigateHandler} />
       case 'history':
-        return <HistoryScreen onNavigate={setCurrentPage} />
+        return <HistoryScreen onNavigate={navigateHandler} />
       case 'charts':
-        return <ChartsScreen onNavigate={setCurrentPage} />
+        return <ChartsScreen onNavigate={navigateHandler} />
       case 'goals':
-        return <GoalsScreen onNavigate={setCurrentPage} />
+        return <GoalsScreen onNavigate={navigateHandler} />
       case 'investments':
-        return <InvestmentsScreen onNavigate={setCurrentPage} />
+        return <InvestmentsScreen onNavigate={navigateHandler} />
       case 'settings':
-        return <SettingsScreen onNavigate={setCurrentPage} onLogout={handleLogout} />
+        return <SettingsScreen onNavigate={navigateHandler} onLogout={handleLogout} />
       default:
-        return <Dashboard onNavigate={(page: Page) => setCurrentPage(page as Page)} />
+        return <Dashboard onNavigate={navigateHandler} />
     }
   }
 
@@ -186,5 +190,3 @@ function App() {
     </div>
   )
 }
-
-export default App
