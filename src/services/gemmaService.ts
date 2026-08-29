@@ -23,12 +23,9 @@ class GemmaService {
     try {
       if (this.part2) {
         this.genAI = new GoogleGenerativeAI(this.apiKey)
-        // System instruction je nyní správně vložena přes konfiguraci modelu
+        // Inicializujeme čistě model bez nepodporovaných vlastností
         this.model = this.genAI.getGenerativeModel({ 
-          model: 'gemini-1.5-flash',
-          systemInstruction: {
-            parts: [{ text: 'Jsi přátelský český finanční poradce. Pomáháš lidem dostat se z dluhů. Odpovídej věcně, stručně, lidsky a motivující.' }]
-          }
+          model: 'gemini-1.5-flash'
         })
       }
     } catch (e) {
@@ -98,7 +95,10 @@ class GemmaService {
         }))
       })
 
-      const result = await chat.sendMessage(userMessage)
+      // Přidáme systémovou instrukci přímo do kontextu zprávy, aby se choval jako finanční poradce
+      const promptWithPersona = `Jsi přátelský český finanční poradce pomáhající lidem s dluhy. Odpovídej věcně, stručně a lidsky. Uživatel píše: ${userMessage}`
+
+      const result = await chat.sendMessage(promptWithPersona)
       const responseText = result.response.text() || 'Omlouvám se, na tohle nedokážám odpovědět.'
       const finalResponse = `${responseText}\n\n_(Dnešní zbývající limit: ${limitCheck.remaining} zpráv)_`
 
