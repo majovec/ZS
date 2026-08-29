@@ -28,7 +28,13 @@ export const App: React.FC = () => {
   const setInvestments = useAppStore((state) => state.setInvestments)
 
   useEffect(() => {
+    // Pojistka: Pokud Firebase do 3 sekund neodpovědí, ukončíme načítání, aby se aplikace nezasekla
+    const timeout = setTimeout(() => {
+      setLoading(false)
+    }, 3000)
+
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      clearTimeout(timeout)
       if (authUser) {
         setUser({
           uid: authUser.uid,
@@ -59,7 +65,10 @@ export const App: React.FC = () => {
       setLoading(false)
     })
 
-    return unsubscribe
+    return () => {
+      clearTimeout(timeout)
+      unsubscribe()
+    }
   }, [setUser, setCategories, setTransactions, setGoals, setInvestments])
 
   if (loading) {
@@ -67,14 +76,30 @@ export const App: React.FC = () => {
       <div
         style={{
           display: 'flex',
+          flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '100vh',
           backgroundColor: colors.blackDeep,
           color: colors.textPrimary,
+          gap: spacing.md,
         }}
       >
         <p>Nahrávám aplikaci...</p>
+        <button
+          onClick={() => setLoading(false)}
+          style={{
+            background: colors.gold,
+            color: colors.blackDeep,
+            border: 'none',
+            padding: `${spacing.sm} ${spacing.md}`,
+            borderRadius: '4px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+          }}
+        >
+          Přeskočit načítání
+        </button>
       </div>
     )
   }
