@@ -7,15 +7,16 @@ class GemmaService {
   private pipe: any = null
   private isLoading = false
   private conversationHistory: GemmaMessage[] = []
+  private lastStatus = 'Zatím nespuštěno'
 
   async initialize(): Promise<void> {
     if (this.pipe) return
 
     try {
       this.isLoading = true
-      console.log('🤖 Inicializuji Gemmu přes CDN...')
+      this.lastStatus = 'Stahuji AI model z CDN (může to chvíli trvat)...'
+      console.log('🤖 ' + this.lastStatus)
 
-      // Dynamické vyhodnocení pro obcházení kontroly TypeScriptu i Vite bundleru
       const transformers = await (new Function("url_str", "return import(url_str)"))(
         'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.1.0'
       )
@@ -25,16 +26,19 @@ class GemmaService {
       env.allowRemoteModels = true
       env.allowPatterns = ['.*']
 
-      // Stáhni malý model - FLAN-T5-Small (~230MB)
+      this.lastStatus = 'Inicializuji model v paměti...'
+      
       this.pipe = await pipeline(
         'text2text-generation',
-        'google/flan-t5-small'
+        'Xenova/LaMini-Flan-T5-248M'
       )
 
-      console.log('✅ Gemma je připravená!')
+      this.lastStatus = 'AI je plně připravená!'
+      console.log('✅ ' + this.lastStatus)
       this.isLoading = false
-    } catch (error) {
-      console.error('❌ Chyba při načítání Gemmy:', error)
+    } catch (error: any) {
+      this.lastStatus = 'Chyba: ' + (error?.message || error)
+      console.error('❌ ' + this.lastStatus, error)
       this.isLoading = false
       throw error
     }
@@ -42,52 +46,50 @@ class GemmaService {
 
   async chat(userMessage: string): Promise<string> {
     try {
+      // Speciální příkaz pro zjištění stavu přímo z chatu
+      if (userMessage.trim() === '/status') {
+        return `📊 Stav AI: ${this.lastStatus} | Připraveno: ${!!this.pipe}`
+      }
+
       if (!this.pipe) {
         await this.initialize()
       }
 
-      // Přidej do history
       this.conversationHistory.push({
         role: 'user',
         content: userMessage,
       })
 
-      // Vytvoř prompt
       const prompt = this.buildPrompt(userMessage)
 
-      console.log('🤔 Gemma přemýšlí...')
-
-      // Vygeneruj odpověď
       const result = await this.pipe(prompt, {
-        max_length: 200,
+        max_length: 150,
         temperature: 0.7,
         top_p: 0.9,
       })
 
       const response =
         result[0]?.generated_text ||
-        'Omlouvám se, nemohl jsem generovat odpověď.'
+        'Omlouvám se, na tohle nedokázám odpovědět.'
 
-      // Ulož do history
       this.conversationHistory.push({
         role: 'assistant',
         content: response,
       })
 
       return response
-    } catch (error) {
-      console.error('Gemma Error:', error)
-      throw error
+    } catch (error: any) {
+      return `⚠️ Chyba při běhu AI: ${error?.message || error}`
     }
   }
 
   private buildPrompt(userMessage: string): string {
     const history = this.conversationHistory
-      .slice(-4) // Poslední 4 zprávy
+      .slice(-4)
       .map((msg) => `${msg.role === 'user' ? 'Uživatel' : 'Asistent'}: ${msg.content}`)
       .join('\n')
 
-    return `Jsi finanční poradce v české aplikaci pro správu osobních financí. Odpovídej v češtině, bud přátelský a motivující. Na konci vždy dodej: "Znovu silnější! 💪"
+    return `Jsi přátelský finanční poradce. Pomáháš lidem dostat se z dluhů. Odpovídej v češtině, stručně a motivující.
 
 ${history}
 
@@ -109,9 +111,7 @@ Asistent:`
   }
 
   getLoadingStatus(): string {
-    if (this.isLoading) return 'Loading...'
-    if (!this.pipe) return 'Not initialized'
-    return 'Ready'
+    return this.lastStatus
   }
 }
 
