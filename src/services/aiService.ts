@@ -72,7 +72,7 @@ class AIEngine {
     return response
   }
 
-  private buildPrompt(userMessage: string, context: string): string {
+  private buildPrompt(_userMessage: string, context: string): string {
     return `
 ${this.SYSTEM_PROMPT}
 
@@ -81,8 +81,6 @@ ${context}
 
 === HISTORIE KONVERZACE ===
 ${this.conversationHistory.map((msg) => `${msg.role}: ${msg.content}`).join('\n')}
-
-Nová otázka uživatele: ${userMessage}
 
 Odpověď:
     `

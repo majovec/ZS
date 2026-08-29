@@ -1,5 +1,3 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
 interface OCRResult {
   amount: number | null
   merchant: string
@@ -110,12 +108,11 @@ class OCRService {
   async processReceiptImage(file: File): Promise<OCRResult> {
     try {
       // Přečíst soubor jako base64
-      const base64 = await this.fileToBase64(file)
-      const text = await this.extractTextFromImage(base64)
+      const _base64 = await this.fileToBase64(file)
+      const text = await this.extractTextFromImage(_base64)
 
       const amount = this.extractAmount(text)
       const merchant = this.extractMerchant(text)
-      const category = this.suggestCategory(merchant, text)
 
       return {
         amount,
