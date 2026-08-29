@@ -1,18 +1,48 @@
-import React, { useMemo } from 'react'
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import React, { useMemo, useState } from 'react'
 import { colors, spacing } from '@/theme/colors'
 import { useAppStore } from '@/store/appStore'
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Card } from '@/components/Card'
 
-export const ChartsScreen: React.FC = () => {
+interface ChartsScreenProps {
+  onNavigate?: (page: string) => void
+}
+
+const ChartsScreen: React.FC<ChartsScreenProps> = ({ onNavigate }) => {
   const transactions = useAppStore((state) => state.transactions)
   const categories = useAppStore((state) => state.categories)
-  const currentMonth = useAppStore((state) => state.currentMonth)
+  const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7))
 
-  const categoryMap = useMemo(
-    () => new Map(categories.map((c) => [c.id, c])),
-    [categories]
-  )
+  const categoryMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories])
+
+  // Měsíční trend (poslední 6 měsíců)
+  const monthlyTrend = useMemo(() => {
+    const last6Months: Record<string, { income: number; expense: number }> = {}
+    const now = new Date()
+
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const monthKey = date.toISOString().slice(0, 7)
+      last6Months[monthKey] = { income: 0, expense: 0 }
+    }
+
+    transactions.forEach((tx) => {
+      const monthKey = tx.date.toISOString().slice(0, 7)
+      if (last6Months[monthKey]) {
+        if (tx.type === 'income') {
+          last6Months[monthKey].income += tx.amount
+        } else {
+          last6Months[monthKey].expense += tx.amount
+        }
+      }
+    })
+
+    return Object.entries(last6Months).map(([month, data]) => ({
+      month: month.slice(5),
+      income: Math.round(data.income),
+      expense: Math.round(data.expense),
+    }))
+  }, [transactions])
 
   // Data pro výdaje po kategoriích
   const categoryExpenses = useMemo(() => {
@@ -27,144 +57,113 @@ export const ChartsScreen: React.FC = () => {
       }
     })
 
-    return Object.entries(expenses).map(([name, value]) => ({
-      name,
-      value: Math.round(value),
-    })).sort((a, b) => b.value - a.value)
+    return Object.entries(expenses)
+      .map(([name, value]) => ({
+        name,
+        value: Math.round(value),
+      }))
+      .sort((a, b) => b.value - a.value)
   }, [transactions, categories, currentMonth])
 
-  // Data pro měsíční trend
-  const monthlyTrend = useMemo(() => {
-    const months: Record<string, { income: number; expense: number }> = {}
-
-    transactions.forEach((tx) => {
-      const month = tx.date.toISOString().slice(0, 7)
-      if (!months[month]) {
-        months[month] = { income: 0, expense: 0 }
-      }
-
-      if (tx.type === 'income') {
-        months[month].income += tx.amount
-      } else {
-        months[month].expense += tx.amount
-      }
-    })
-
-    return Object.entries(months)
-      .sort()
-      .map(([month, data]) => ({
-        month: new Date(month).toLocaleDateString('cs-CZ', { month: 'short' }),
-        income: Math.round(data.income),
-        expense: Math.round(data.expense),
-      }))
-      .slice(-6) // Poslední 6 měsíců
-  }, [transactions])
-
-  const COLORS = [colors.gold, colors.redExpense, colors.greenSuccess, colors.blueInfo, colors.purpleUnexpected]
+  const COLORS = [
+    colors.gold,
+    colors.greenSuccess,
+    colors.redExpense,
+    colors.orangeWarning,
+    colors.blueInfo,
+    colors.purpleAccent,
+  ]
 
   return (
-    <div
-      style={{
-        backgroundColor: colors.blackDeep,
-        minHeight: '100vh',
-        padding: spacing.md,
-        color: colors.textPrimary,
-        overflowY: 'auto',
-      }}
-    >
-      <h1 style={{ marginBottom: spacing.lg }}>📈 Grafy</h1>
+    <div style={{ padding: spacing.md, paddingBottom: 100 }}>
+      <h1 style={{ marginTop: 0, color: colors.gold }}>📊 Grafy a Analytika</h1>
 
-      {/* Bar Chart - Měsíční trend */}
-      <Card style={{ marginBottom: spacing.lg, padding: spacing.md }}>
-        <h2 style={{ fontSize: '16px', marginBottom: spacing.md }}>
-          Měsíční trend
-        </h2>
-        {monthlyTrend.length > 0 ? (
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={monthlyTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
-              <XAxis dataKey="month" stroke={colors.textSecondary} />
-              <YAxis stroke={colors.textSecondary} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: colors.blackCard,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.textPrimary,
-                }}
-              />
-              <Bar dataKey="income" stackId="a" fill={colors.greenSuccess} />
-              <Bar dataKey="expense" stackId="a" fill={colors.redExpense} />
-            </BarChart>
-          </ResponsiveContainer>
-        ) : (
-          <p style={{ color: colors.textSecondary }}>Žádná data</p>
-        )}
-      </Card>
-
-      {/* Pie Chart - Rozdělení výdajů */}
-      <Card style={{ marginBottom: spacing.lg, padding: spacing.md }}>
-        <h2 style={{ fontSize: '16px', marginBottom: spacing.md }}>
-          Rozdělení výdajů (tento měsíc)
-        </h2>
-        {categoryExpenses.length > 0 ? (
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={categoryExpenses}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill={colors.gold}
-                dataKey="value"
-              >
-                {categoryExpenses.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: colors.blackCard,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.textPrimary,
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        ) : (
-          <p style={{ color: colors.textSecondary }}>Žádné výdaje v tomto měsíci</p>
-        )}
-      </Card>
-
-      {/* Category List */}
-      <Card style={{ padding: spacing.md }}>
-        <h2 style={{ fontSize: '16px', marginBottom: spacing.md }}>
-          Výdaje po kategoriích
-        </h2>
-        {categoryExpenses.length > 0 ? (
-          categoryExpenses.map((item) => (
-            <div
-              key={item.name}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: spacing.sm,
-                paddingBottom: spacing.sm,
-                borderBottom: `1px solid ${colors.border}`,
+      {/* Měsíční trend */}
+      <Card style={{ marginBottom: spacing.lg }}>
+        <h2 style={{ marginTop: 0, color: colors.gold, fontSize: '16px' }}>Trend (posledních 6 měsíců)</h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={monthlyTrend}>
+            <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
+            <XAxis dataKey="month" stroke={colors.textSecondary} />
+            <YAxis stroke={colors.textSecondary} />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: colors.blackCard,
+                border: `1px solid ${colors.border}`,
               }}
-            >
-              <span>{item.name}</span>
-              <span style={{ fontWeight: 'bold', color: colors.redExpense }}>
-                {item.value} Kč
-              </span>
+            />
+            <Legend />
+            <Bar dataKey="income" fill={colors.greenSuccess} />
+            <Bar dataKey="expense" fill={colors.redExpense} />
+          </BarChart>
+        </ResponsiveContainer>
+      </Card>
+
+      {/* Výdaje po kategoriích */}
+      <Card style={{ marginBottom: spacing.lg }}>
+        <h2 style={{ marginTop: 0, color: colors.gold, fontSize: '16px' }}>
+          Výdaje po kategoriích ({currentMonth})
+        </h2>
+
+        {categoryExpenses.length > 0 ? (
+          <>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={categoryExpenses}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, value }) => `${name}: ${value}Kč`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {categoryExpenses.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: colors.blackCard,
+                    border: `1px solid ${colors.border}`,
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+
+            <div style={{ marginTop: spacing.lg }}>
+              <h3 style={{ marginTop: 0, fontSize: '14px', color: colors.textSecondary }}>
+                Detailní rozpis:
+              </h3>
+              {categoryExpenses.map(({ name, value }) => (
+                <div
+                  key={name}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: spacing.sm,
+                    paddingBottom: spacing.sm,
+                    borderBottom: `1px solid ${colors.border}`,
+                  }}
+                >
+                  <span>{name}</span>
+                  <span style={{ fontWeight: 'bold', color: colors.redExpense }}>
+                    {value} Kč
+                  </span>
+                </div>
+              ))}
             </div>
-          ))
+          </>
         ) : (
-          <p style={{ color: colors.textSecondary }}>Žádné výdaje</p>
+          <div style={{ textAlign: 'center', color: colors.textSecondary }}>
+            Žádné výdaje v tomto měsíci
+          </div>
         )}
       </Card>
     </div>
   )
 }
+
+export default ChartsScreen
