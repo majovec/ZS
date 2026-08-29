@@ -15,7 +15,7 @@ interface AddTransactionProps {
 const AddTransaction: React.FC<AddTransactionProps> = ({ onNavigate }) => {
   const user = useAppStore((state) => state.user)
   const categories = useAppStore((state) => state.categories)
-  const [type, setType] = useState<TransactionType>('expense')
+  const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE)
   const [categoryId, setCategoryId] = useState('')
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
@@ -36,6 +36,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ onNavigate }) => {
         note,
         date: new Date(),
         source: TransactionSource.MANUAL,
+        createdAt: new Date(),
       })
       setAmount('')
       setNote('')
@@ -109,15 +110,15 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ onNavigate }) => {
           </label>
           <div style={{ display: 'flex', gap: spacing.md }}>
             <Button
-              variant={type === 'income' ? 'primary' : 'secondary'}
-              onClick={() => setType('income' as TransactionType)}
+              variant={type === TransactionType.INCOME ? 'primary' : 'secondary'}
+              onClick={() => setType(TransactionType.INCOME)}
               fullWidth
             >
               Příjem 💰
             </Button>
             <Button
-              variant={type === 'expense' ? 'primary' : 'secondary'}
-              onClick={() => setType('expense' as TransactionType)}
+              variant={type === TransactionType.EXPENSE ? 'primary' : 'secondary'}
+              onClick={() => setType(TransactionType.EXPENSE)}
               fullWidth
             >
               Výdaj 💸
