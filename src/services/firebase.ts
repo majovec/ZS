@@ -1,18 +1,10 @@
 import { initializeApp } from 'firebase/app'
+import { getAnalytics } from 'firebase/analytics'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 import { getMessaging, onMessage } from 'firebase/messaging'
 
-// Tvůj Firebase config - nahraď vlastními hodnotami
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyAbSOdstuMQEySmRtb_9SMKqxJHmhbk0oE",
   authDomain: "finance-pod-kontrolou.firebaseapp.com",
@@ -21,26 +13,27 @@ const firebaseConfig = {
   messagingSenderId: "839958398366",
   appId: "1:839958398366:web:2df718aabf2d8c9e7a028f",
   measurementId: "G-N1WVX44NPN"
-};
+}
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+// Inicializace Firebase
+const app = initializeApp(firebaseConfig)
 
+// Analytics (přidán export, aby TypeScript nehlásil nepoužitou proměnnou)
+export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null
 
 export const auth = getAuth(app)
 export const db = getFirestore(app)
 export const storage = getStorage(app)
 
-// Messaging pro notifikace
-let messaging: any = null
+// Firebase Messaging pro notifikace
+export let messaging: ReturnType<typeof getMessaging> | null = null
 
 try {
   messaging = getMessaging(app)
-  // Naslouchání push notifikacím
+  
+  // Naslouchání push notifikacím na popředí
   onMessage(messaging, (payload) => {
     console.log('Message received: ', payload)
-    // Zobrazit notifikaci
     if ('Notification' in window) {
       new Notification(payload.notification?.title || 'Finance pod kontrolou', {
         body: payload.notification?.body || 'Nová zpráva',
