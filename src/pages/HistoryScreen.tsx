@@ -1,14 +1,34 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { colors, spacing } from '@/theme/colors'
 import { useAppStore } from '@/store/appStore'
 import { Card } from '@/components/Card'
 
-export interface HistoryScreenProps {
-  onNavigate?: (page: string) => void
-}
-
-export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
+export const HistoryScreen: React.FC = () => {
   const transactions = useAppStore((state) => state.transactions)
+  const categories = useAppStore((state) => state.categories)
+
+  const categoryMap = useMemo(
+    () => new Map(categories.map((c) => [c.id, c])),
+    [categories]
+  )
+
+  const groupedTransactions = useMemo(() => {
+    const grouped: Record<string, (typeof transactions)> = {}
+
+    transactions.forEach((tx) => {
+      const monthKey = new Date(tx.date).toLocaleDateString('cs-CZ', {
+        year: 'numeric',
+        month: 'long',
+      })
+
+      if (!grouped[monthKey]) {
+        grouped[monthKey] = []
+      }
+      grouped[monthKey].push(tx)
+    })
+
+    return grouped
+  }, [transactions])
 
   return (
     <div
@@ -19,38 +39,80 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
         color: colors.textPrimary,
       }}
     >
-      <h1 style={{ marginBottom: spacing.lg }}>📜 Historie transakcí</h1>
+      <h1 style={{ marginBottom: spacing.lg }}>📊 Přehled</h1>
 
       {transactions.length === 0 ? (
         <Card style={{ textAlign: 'center', padding: spacing.lg }}>
           <p style={{ color: colors.textSecondary }}>Zatím nemáš žádné transakce</p>
         </Card>
       ) : (
-        transactions.map((tx) => (
-          <Card key={tx.id} style={{ marginBottom: spacing.sm, padding: spacing.md }}>
-            <div
+        Object.entries(groupedTransactions).map(([month, monthTxs]) => (
+          <div key={month} style={{ marginBottom: spacing.lg }}>
+            <h2
               style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
+                fontSize: '16px',
+                color: colors.gold,
+                marginBottom: spacing.md,
+                borderBottom: `1px solid ${colors.border}`,
+                paddingBottom: spacing.sm,
               }}
             >
-              <div>
-                <strong style={{ display: 'block' }}>{tx.title || tx.category}</strong>
-                <small style={{ color: colors.textSecondary }}>
-                  {new Date(tx.createdAt).toLocaleDateString('cs-CZ')}
-                </small>
-              </div>
-              <span
-                style={{
-                  fontWeight: 'bold',
-                  color: tx.type === 'income' ? colors.greenIncome : colors.redExpense,
-                }}
-              >
-                {tx.type === 'income' ? '+' : '-'}{tx.amount} Kč
-              </span>
-            </div>
-          </Card>
+              {month}
+            </h2>
+
+            {monthTxs.map((tx) => {
+              const category = categoryMap.get(tx.categoryId)
+              const isIncome = tx.type === 'income'
+
+              return (
+                <Card
+                  key={tx.id}
+                  style={{
+                    marginBottom: spacing.sm,
+                    padding: spacing.md,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <div>
+                    <p style={{ margin: 0, fontWeight: '500' }}>
+                      {category?.name || 'Neznámá'}
+                    </p>
+                    {tx.note && (
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: '12px',
+                          color: colors.textSecondary,
+                        }}
+                      >
+                        {tx.note}
+                      </p>
+                    )}
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: '11px',
+                        color: colors.textTertiary,
+                      }}
+                    >
+                      {new Date(tx.date).toLocaleDateString('cs-CZ')}
+                    </p>
+                  </div>
+                  <p
+                    style={{
+                      color: isIncome ? colors.greenSuccess : colors.redExpense,
+                      fontWeight: 'bold',
+                      margin: 0,
+                    }}
+                  >
+                    {isIncome ? '+' : '-'}{tx.amount.toFixed(0)} Kč
+                  </p>
+                </Card>
+              )
+            })}
+          </div>
         ))
       )}
     </div>

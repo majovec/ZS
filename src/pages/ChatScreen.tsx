@@ -1,54 +1,83 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { colors, spacing } from '@/theme/colors'
-import { Card } from '@/components/Card'
-import { Button } from '@/components/Button'
-import { Input } from '@/components/Input'
-import { aiEngine } from '@/services/aiService'
 import { useAppStore } from '@/store/appStore'
-
-export interface ChatScreenProps {
-  onNavigate?: (page: string) => void
-}
+import { aiEngine } from '@/services/aiService'
+import { Button } from '@/components/Button'
+import { Card } from '@/components/Card'
 
 interface Message {
-  sender: 'user' | 'ai'
-  text: string
+  role: 'user' | 'assistant'
+  content: string
 }
 
-export const ChatScreen: React.FC<ChatScreenProps> = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    { sender: 'ai', text: 'Ahoj! Jsem tvůj finanční asistent. Jak ti mohu dnes pomoci?' },
-  ])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-
+export const ChatScreen: React.FC = () => {
+  const user = useAppStore((state) => state.user)
   const transactions = useAppStore((state) => state.transactions)
   const categories = useAppStore((state) => state.categories)
   const goals = useAppStore((state) => state.goals)
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || loading) return
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: 'assistant',
+      content:
+        'Ahoj! Jsem tvůj AI finanční poradce. Zeptej se mě na cokoli o tvých financích!',
+    },
+  ])
+  const [inputValue, setInputValue] = useState('')
+  const [loading, setLoading] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-    const userMsg = input.trim()
-    setInput('')
-    setMessages((prev) => [...prev, { sender: 'user', text: userMsg }])
+  useEffect(() => {
+    aiEngine.initialize()
+  }, [])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || !user) return
+
+    const userMessage = inputValue
+    setInputValue('')
+    setMessages((prev) => [...prev, { role: 'user', content: userMessage }])
     setLoading(true)
 
     try {
-      const response = await aiEngine.chat(userMsg, {
+      // Vypočítej měsíční sumy
+      let monthlyIncome = 0
+      let monthlyExpense = 0
+      const now = new Date()
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+      transactions.forEach((tx) => {
+        const txMonth = tx.date.toISOString().slice(0, 7)
+        if (txMonth === currentMonth) {
+          if (tx.type === 'income') {
+            monthlyIncome += tx.amount
+          } else {
+            monthlyExpense += tx.amount
+          }
+        }
+      })
+
+      const response = await aiEngine.chat(userMessage, {
         transactions,
         categories,
         goals,
-        monthlyIncome: 0,
-        monthlyExpense: 0,
+        monthlyIncome,
+        monthlyExpense,
       })
-      setMessages((prev) => [...prev, { sender: 'ai', text: response }])
+
+      setMessages((prev) => [...prev, { role: 'assistant', content: response }])
     } catch (error) {
-      console.error('AI chat error:', error)
+      console.error('Chat error:', error)
       setMessages((prev) => [
         ...prev,
-        { sender: 'ai', text: 'Omlouvám se, ale při zpracování dotazu došlo k chybě.' },
+        {
+          role: 'assistant',
+          content: 'Omlouvám se, došlo k chybě. Zkus to prosím později.',
+        },
       ])
     } finally {
       setLoading(false)
@@ -61,50 +90,91 @@ export const ChatScreen: React.FC<ChatScreenProps> = () => {
         backgroundColor: colors.blackDeep,
         minHeight: '100vh',
         padding: spacing.md,
-        color: colors.textPrimary,
         display: 'flex',
         flexDirection: 'column',
+        color: colors.textPrimary,
       }}
     >
-      <h1 style={{ marginBottom: spacing.md }}>🤖 AI Asistent</h1>
+      <h1 style={{ marginBottom: spacing.lg }}>💬 AI Rádce</h1>
 
-      <div style={{ flex: 1, overflowY: 'auto', marginBottom: spacing.md }}>
-        {messages.map((msg, index) => (
+      {/* Messages */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          marginBottom: spacing.md,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: spacing.md,
+        }}
+      >
+        {messages.map((msg, idx) => (
           <div
-            key={index}
+            key={idx}
             style={{
               display: 'flex',
-              justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start',
-              marginBottom: spacing.sm,
+              justifyContent:
+                msg.role === 'user' ? 'flex-end' : 'flex-start',
             }}
           >
             <Card
               style={{
                 maxWidth: '80%',
                 backgroundColor:
-                  msg.sender === 'user' ? colors.gold : colors.blackSurface,
-                color: msg.sender === 'user' ? colors.blackDeep : colors.textPrimary,
-                padding: spacing.md,
+                  msg.role === 'user' ? colors.gold : colors.blackCard,
+                color: msg.role === 'user' ? colors.blackDeep : colors.textPrimary,
               }}
             >
-              {msg.text}
+              {msg.content}
             </Card>
           </div>
         ))}
+        {loading && (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-start',
+            }}
+          >
+            <Card>Přemýšlím...</Card>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSend} style={{ display: 'flex', gap: spacing.sm }}>
-        <div style={{ flex: 1 }}>
-          <Input
-            placeholder="Napiš dotaz..."
-            value={input}
-            onChange={setInput}
-          />
-        </div>
-        <Button type="submit" loading={loading}>
-          Odeslat
+      {/* Input */}
+      <div
+        style={{
+          display: 'flex',
+          gap: spacing.sm,
+        }}
+      >
+        <input
+          type="text"
+          placeholder="Zeptej se na finance..."
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') handleSendMessage()
+          }}
+          style={{
+            flex: 1,
+            padding: `${spacing.sm} ${spacing.md}`,
+            backgroundColor: colors.blackSurface,
+            border: `1px solid ${colors.border}`,
+            borderRadius: '8px',
+            color: colors.textPrimary,
+            fontFamily: 'inherit',
+          }}
+        />
+        <Button
+          onClick={handleSendMessage}
+          disabled={loading || !inputValue.trim()}
+          style={{ padding: `${spacing.sm} ${spacing.md}` }}
+        >
+          Poslat
         </Button>
-      </form>
+      </div>
     </div>
   )
 }
