@@ -13,12 +13,12 @@ class GemmaService {
 
     try {
       this.isLoading = true
-      console.log('🤖 Inicializuji Gemmu...')
+      console.log('🤖 Inicializuji Gemmu přes CDN...')
 
-      // Dynamický import pro správné fungování v prohlížeči i při buildu ve Vite
-      const transformers = await import('@huggingface/transformers')
-      const pipeline = transformers.pipeline
-      const env = transformers.env
+      // Načtení přímo přes ESM CDN – obchází veškeré chyby Vite a Rollupu při buildu
+      const { pipeline, env } = await import(
+        'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.1.0'
+      )
 
       env.allowLocalModels = true
       env.allowRemoteModels = true
