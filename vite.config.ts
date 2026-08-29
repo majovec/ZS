@@ -4,6 +4,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
 export default defineConfig({
+  // Zajišťuje správné relativní cesty ke všem JavaScript a CSS souborům na GitHub Pages
+  base: '/ZS/',
+
   plugins: [
     react(),
     VitePWA({
@@ -15,8 +18,9 @@ export default defineConfig({
         theme_color: '#0A0A0A',
         background_color: '#0A0A0A',
         display: 'standalone',
-        scope: '/',
-        start_url: '/',
+        // Oprava cest v manifestu pro funkční PWA na podsložce /ZS/
+        scope: '/ZS/',
+        start_url: '/ZS/',
       },
     }),
   ],
