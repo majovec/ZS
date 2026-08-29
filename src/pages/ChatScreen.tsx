@@ -20,15 +20,41 @@ export const ChatScreen: React.FC = () => {
     {
       role: 'assistant',
       content:
-        'Ahoj! Jsem tvůj AI finanční poradce. Zeptej se mě na cokoli o tvých financích!',
+        'Ahoj! Jsem tvůj AI finanční poradce. Iniciuji AI model (první spuštění může trvat 2-3 minuty). Zeptej se mě na cokoli o tvých financích!',
     },
   ])
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
+  const [aiStatus, setAiStatus] = useState('Inicializuji...')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    aiEngine.initialize()
+    const initAI = async () => {
+      try {
+        await aiEngine.initialize()
+        setAiStatus('✅ Připraveno!')
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: '✅ AI je připravená! Teď se mě můžeš ptát na cokoliv.',
+          },
+        ])
+      } catch (error) {
+        console.error('AI init error:', error)
+        setAiStatus('⚠️ Fallback mode')
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content:
+              '⚠️ AI se nepodařila načíst. Používám základní režim. Zeptej se mě!',
+          },
+        ])
+      }
+    }
+
+    initAI()
   }, [])
 
   useEffect(() => {
@@ -95,7 +121,12 @@ export const ChatScreen: React.FC = () => {
         color: colors.textPrimary,
       }}
     >
-      <h1 style={{ marginBottom: spacing.lg }}>💬 AI Rádce</h1>
+      <div style={{ marginBottom: spacing.md }}>
+        <h1 style={{ marginBottom: spacing.sm }}>💬 AI Rádce</h1>
+        <p style={{ fontSize: '12px', color: colors.textSecondary }}>
+          Status: {aiStatus}
+        </p>
+      </div>
 
       {/* Messages */}
       <div
@@ -136,7 +167,7 @@ export const ChatScreen: React.FC = () => {
               justifyContent: 'flex-start',
             }}
           >
-            <Card>Přemýšlím...</Card>
+            <Card>🤔 Gemma přemýšlí...</Card>
           </div>
         )}
         <div ref={messagesEndRef} />
