@@ -28,7 +28,7 @@ export const App: React.FC = () => {
   const setInvestments = useAppStore((state) => state.setInvestments)
 
   useEffect(() => {
-    // Pojistka: Pokud Firebase do 3 sekund neodpovědí, ukončíme načítání, aby se aplikace nezasekla
+    // Pojistka: Pokud Firebase do 3 sekund neodpovědí, ukončíme načítání
     const timeout = setTimeout(() => {
       setLoading(false)
     }, 3000)
@@ -151,28 +151,38 @@ export const App: React.FC = () => {
     }
   }
 
+  const showNav = currentPage !== 'add-transaction' && currentPage !== 'chat'
+
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '100vh',
+        minHeight: '100dvh',
         backgroundColor: colors.blackDeep,
+        paddingBottom: showNav ? '80px' : '0', // Rezerva pro fixní menu, aby nebyl obsah překrytý
       }}
     >
       <div style={{ flex: 1 }}>
         {renderPage()}
       </div>
 
-      {currentPage !== 'add-transaction' && currentPage !== 'chat' && (
+      {showNav && (
         <nav
           style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 1000,
             borderTop: `1px solid ${colors.border}`,
             backgroundColor: colors.blackSurface,
-            padding: `${spacing.sm} 0`,
+            paddingTop: spacing.sm,
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
             display: 'grid',
             gridTemplateColumns: 'repeat(5, 1fr)',
             gap: spacing.sm,
+            boxShadow: '0 -4px 12px rgba(0,0,0,0.5)',
           }}
         >
           <NavButton
@@ -206,7 +216,7 @@ export const App: React.FC = () => {
           <NavButton
             icon="⚙️"
             label="Více"
-            active={false}
+            active={currentPage === 'settings'}
             onClick={() => setCurrentPage('settings')}
           />
         </nav>
@@ -230,12 +240,12 @@ const NavButton: React.FC<NavButtonProps> = ({ icon, label, active, onClick }) =
       border: 'none',
       color: active ? colors.gold : colors.textSecondary,
       cursor: 'pointer',
-      padding: spacing.md,
+      padding: spacing.xs,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      gap: spacing.sm,
-      fontSize: '24px',
+      gap: '2px',
+      fontSize: '22px',
       transition: 'color 0.3s ease',
     }}
   >
