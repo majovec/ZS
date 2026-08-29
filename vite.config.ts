@@ -8,11 +8,16 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: [
+        'favicon.ico',
+        'apple-touch-icon.png',
+        'masked-icon.svg',
+      ],
       manifest: {
         name: 'Finance pod kontrolou',
         short_name: 'Finance',
-        description: 'Správa osobních financí - Znovu Silnější',
+        description:
+          'Správa osobních financí - Znovu Silnější',
         theme_color: '#0A0A0A',
         background_color: '#0A0A0A',
         display: 'standalone',
@@ -46,10 +51,13 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,woff,woff2}'],
+        globPatterns: [
+          '**/*.{js,css,html,ico,png,svg,json,woff,woff2}',
+        ],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            urlPattern:
+              /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'google-fonts-cache',
@@ -60,7 +68,8 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
+            urlPattern:
+              /^https:\/\/firestore\.googleapis\.com\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'firestore-cache',
@@ -71,11 +80,13 @@ export default defineConfig({
       },
     }),
   ],
+
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
+
   server: {
     port: 5173,
   },
