@@ -1,10 +1,3 @@
-import { pipeline, env } from '@huggingface/transformers'
-
-// Nastavení - stahuj modely z cache
-env.allowLocalModels = true
-env.allowRemoteModels = true
-env.allowPatterns = ['.*']
-
 interface GemmaMessage {
   role: 'user' | 'assistant'
   content: string
@@ -21,6 +14,15 @@ class GemmaService {
     try {
       this.isLoading = true
       console.log('🤖 Inicializuji Gemmu...')
+
+      // Dynamický import pro správné fungování v prohlížeči i při buildu ve Vite
+      const transformers = await import('@huggingface/transformers')
+      const pipeline = transformers.pipeline
+      const env = transformers.env
+
+      env.allowLocalModels = true
+      env.allowRemoteModels = true
+      env.allowPatterns = ['.*']
 
       // Stáhni malý model - FLAN-T5-Small (~230MB)
       this.pipe = await pipeline(
