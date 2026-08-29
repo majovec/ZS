@@ -1,5 +1,3 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
 interface GemmaMessage {
   role: 'user' | 'assistant'
   content: string
@@ -13,24 +11,12 @@ class GemmaService {
     return this.part1 + this.part2
   }
 
-  private genAI: GoogleGenerativeAI | null = null
-  private model: any = null
   private conversationHistory: GemmaMessage[] = []
   private lastStatus = 'Připraveno (Limit: 15 zpráv/den)'
   private readonly MAX_DAILY_MESSAGES = 15
 
-  constructor() {
-    try {
-      if (this.part2) {
-        // Přidali jsme apiVersion: 'v1beta', aby to 1.5 modely v pořádku našlo
-        this.genAI = new GoogleGenerativeAI(this.apiKey, { apiVersion: 'v1beta' })
-        this.model = this.genAI.getGenerativeModel({ 
-          model: 'gemini-1.5-flash'
-        })
-      }
-    } catch (e) {
-      console.error('Chyba při inicializaci Gemini:', e)
-    }
+  async initialize(): Promise<void> {
+    this.lastStatus = 'Připraveno'
   }
 
   private checkAndIncrementLimit(): { allowed: boolean; remaining: number } {
@@ -59,13 +45,6 @@ class GemmaService {
     }
   }
 
-  async initialize(): Promise<void> {
-    if (!this.model) {
-      throw new Error('Chybí platný Google Gemini API klíč')
-    }
-    this.lastStatus = 'Připraveno'
-  }
-
   async chat(userMessage: string): Promise<string> {
     try {
       if (userMessage.trim() === '/status') {
@@ -79,26 +58,45 @@ class GemmaService {
         return `🛑 Vyčerpal/a jsi svůj dnešní bezplatný limit ${this.MAX_DAILY_MESSAGES} zpráv. Pokračovat můžeš zase zítra! 💪`
       }
 
-      if (!this.model) {
-        await this.initialize()
+      // Sestavíme historii zpráv pro REST API
+      const contents = this.conversationHistory.map(msg => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      }))
+
+      // Přidáme aktuální zprávu s personou finančního poradce
+      const promptWithPersona = `Jsi přátelský český finanční poradce pomáhající lidem s dluhy. Odpovídej věcně, stručně a lidsky. Uživatel píše: ${userMessage}`
+      
+      contents.push({
+        role: 'user',
+        parts: [{ text: promptWithPersona }]
+      })
+
+      // Přímý endpoint pro Gemini 1.5 Flash na v1beta
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ contents })
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Chyba serveru (${response.status}): ${errorText}`)
       }
 
+      const data = await response.json()
+      const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Omlouvám se, na tohle nedokázám odpovědět.'
+
+      // Uložíme do historie
       this.conversationHistory.push({
         role: 'user',
         content: userMessage,
       })
 
-      const chat = this.model.startChat({
-        history: this.conversationHistory.slice(0, -1).map(msg => ({
-          role: msg.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: msg.content }]
-        }))
-      })
-
-      const promptWithPersona = `Jsi přátelský český finanční poradce pomáhající lidem s dluhy. Odpovídej věcně, stručně a lidsky. Uživatel píše: ${userMessage}`
-
-      const result = await chat.sendMessage(promptWithPersona)
-      const responseText = result.response.text() || 'Omlouvám se, na tohle nedokážám odpovědět.'
       const finalResponse = `${responseText}\n\n_(Dnešní zbývající limit: ${limitCheck.remaining} zpráv)_`
 
       this.conversationHistory.push({
@@ -108,7 +106,7 @@ class GemmaService {
 
       return finalResponse
     } catch (error: any) {
-      console.error('Gemini Error:', error)
+      console.error('Gemini REST Error:', error)
       return `⚠️ Chyba: ${error?.message || 'Spojení selhalo.'}`
     }
   }
@@ -122,7 +120,7 @@ class GemmaService {
   }
 
   isReady(): boolean {
-    return !!this.model
+    return true
   }
 
   getLoadingStatus(): string {
