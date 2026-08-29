@@ -85,6 +85,7 @@ export default defineConfig({
   build: {
     target: 'esnext',
     rollupOptions: {
+      external: ['@huggingface/transformers'],
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
