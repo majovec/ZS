@@ -38,7 +38,7 @@ export const AddTransaction: React.FC<{
         amount: parseFloat(amount),
         note,
         date: new Date(),
-        source: 'manual',
+        source: TransactionSource.MANUAL,
         createdAt: new Date(),
       })
 
