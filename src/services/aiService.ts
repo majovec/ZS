@@ -1,6 +1,5 @@
- import * as tf from '@tensorflow/tfjs'
-import '@tensorflow/tfjs-backend-webgl'
 import { Transaction, Category, Goal } from '@/models/types'
+import { gemmaService } from './gemmaService'
 
 interface AIMessage {
   role: 'user' | 'assistant'
@@ -9,7 +8,8 @@ interface AIMessage {
 
 class AIEngine {
   private conversationHistory: AIMessage[] = []
-  private modelLoaded = false
+  private gemmaReady = false
+  private gemmaInitialized = false
 
   private SYSTEM_PROMPT = `
     Jsi přátelský asistent v aplikaci pro správu osobních financí.
@@ -20,21 +20,24 @@ class AIEngine {
   `
 
   async initialize(): Promise<void> {
+    if (this.gemmaInitialized) return
+
     try {
-      await tf.setBackend('webgl')
-      await tf.ready()
-      this.modelLoaded = true
-      console.log('TensorFlow.js loaded')
+      console.log('🤖 Inicializuji AI...')
+      await gemmaService.initialize()
+      this.gemmaReady = true
+      this.gemmaInitialized = true
+      console.log('✅ AI je připravená!')
     } catch (error) {
-      console.warn('WebGL not available, falling back to CPU', error)
-      await tf.setBackend('cpu')
-      this.modelLoaded = true
+      console.warn('⚠️ Gemma se nepodařila, používám fallback', error)
+      this.gemmaReady = false
+      this.gemmaInitialized = true
     }
   }
 
   async chat(
     userMessage: string,
-    userContext: {
+    _userContext?: {
       transactions: Transaction[]
       categories: Category[]
       goals: Goal[]
@@ -42,114 +45,32 @@ class AIEngine {
       monthlyExpense: number
     }
   ): Promise<string> {
-    if (!this.modelLoaded) {
+    if (!this.gemmaInitialized) {
       await this.initialize()
     }
 
-    this.conversationHistory.push({
-      role: 'user',
-      content: userMessage,
-    })
+    try {
+      // Pokud je Gemma připravená, použij ji
+      if (this.gemmaReady) {
+        console.log('🤖 Používám Gemmu...')
+        const response = await gemmaService.chat(userMessage)
 
-    const context = this.prepareContext(userContext)
-    const prompt = this.buildPrompt(userMessage, context)
+        this.conversationHistory.push({
+          role: 'user',
+          content: userMessage,
+        })
+        this.conversationHistory.push({
+          role: 'assistant',
+          content: response,
+        })
 
-    const response = await this.generateResponse(prompt, userMessage)
-
-    this.conversationHistory.push({
-      role: 'assistant',
-      content: response,
-    })
-
-    return response
-  }
-
-  private buildPrompt(_userMessage: string, context: string): string {
-    return `
-${this.SYSTEM_PROMPT}
-
-=== KONTEXT UŽIVATELE ===
-${context}
-
-=== HISTORIE KONVERZACE ===
-${this.conversationHistory
-  .map((msg) => `${msg.role}: ${msg.content}`)
-  .join('\n')}
-
-Odpověď:
-    `
-  }
-
-  private prepareContext(userContext: {
-    transactions: Transaction[]
-    categories: Category[]
-    goals: Goal[]
-    monthlyIncome: number
-    monthlyExpense: number
-  }): string {
-    const categoryMap = new Map(
-      userContext.categories.map((c) => [c.id, c])
-    )
-
-    const topExpenses = this.getTopExpenses(
-      userContext.transactions,
-      categoryMap
-    )
-
-    const activeGoals = userContext.goals.filter(
-      (g) => g.isActive
-    )
-
-    return `
-Měsíční příjmy: ${userContext.monthlyIncome} Kč
-Měsíční výdaje: ${userContext.monthlyExpense} Kč
-Zbývá: ${userContext.monthlyIncome - userContext.monthlyExpense} Kč
-
-Top výdaje:
-${topExpenses
-  .map((item) => `- ${item.name}: ${item.amount} Kč`)
-  .join('\n')}
-
-Aktivní cíle:
-${activeGoals
-  .map(
-    (g) =>
-      `- ${g.title}: ${g.currentAmount}/${g.targetAmount} Kč (${Math.round(
-        (g.currentAmount / g.targetAmount) * 100
-      )}%)`
-  )
-  .join('\n')}
-    `.trim()
-  }
-
-  private getTopExpenses(
-    transactions: Transaction[],
-    categoryMap: Map<string, Category>
-  ): Array<{ name: string; amount: number }> {
-    const expenses = new Map<string, number>()
-
-    transactions.forEach((tx) => {
-      if (tx.type === 'expense') {
-        const category = categoryMap.get(tx.categoryId)
-        const categoryName = category?.name || 'Ostatní'
-
-        expenses.set(
-          categoryName,
-          (expenses.get(categoryName) || 0) + tx.amount
-        )
+        return response
       }
-    })
+    } catch (error) {
+      console.warn('Gemma error, používám fallback:', error)
+    }
 
-    return Array.from(expenses.entries())
-      .map(([name, amount]) => ({ name, amount }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5)
-  }
-
-  private async generateResponse(
-    _prompt: string,
-    userMessage: string
-  ): Promise<string> {
+    // Fallback - pokud Gemma selhá
     return this.generateRuleBasedResponse(userMessage)
   }
 
@@ -237,7 +158,7 @@ ${activeGoals
     if (lowerMessage.match(/jak to funguje|jak se používá|jak tady|kde je|jak přidat|jak skenovat/i)) {
       const responses = [
         '📱 Aplikace je super jednoduchá! Dashboard ti ukazuje přehled, Nový zápis přidáš transakci, OCR skenuje účtenky, Grafy ti ukazují analýzu. Zkus to!',
-        'Kam máš první kroky? 1 Přidej si prvních pár transakcí 2️ Podívej se na grafy 3️ Nastav si cíl 4 Sleduj pokrok! Jednoduché! 🎯',
+        'Kam máš první kroky? 1️⃣ Přidej si prvních pár transakcí 2️⃣ Podívej se na grafy 3️⃣ Nastav si cíl 4️⃣ Sleduj pokrok! Jednoduché! 🎯',
         'Nejrychlejší tip: přidávej všechny výdaje co udělíš. I ty malé! Pak až se podíváš na grafy, zjistíš kde se peníze ztrácejí. Probuď se! 💡',
         'Skenování účtenek? Klikni na fotoaparát ikonu a skenuj! Aplikace ti sama detekuje částku. Nemusíš psát nic! Geniální, ne? 📷',
       ]
