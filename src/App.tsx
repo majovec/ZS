@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { onAuthStateChanged } from 'firebase/auth'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth } from '@/services/firebase'
 import { useAppStore } from '@/store/appStore'
 import { categoriesService, transactionsService, goalsService, investmentsService } from '@/services/firestoreService'
@@ -27,15 +27,58 @@ export const App: React.FC = () => {
   const setGoals = useAppStore((state) => state.setGoals)
   const setInvestments = useAppStore((state) => state.setInvestments)
 
+  // BEZPEČNOSTNÍ CHECK - Detekuj nové okno/incognito
   useEffect(() => {
-    // Pojistka: Pokud Firebase do 3 sekund neodpovědí, ukončíme načítání
+    const sessionKey = 'app_session_id'
+    const storedSessionId = sessionStorage.getItem(sessionKey)
+
+    if (!storedSessionId) {
+      // Toto je nové okno nebo incognito mode
+      // Vymaž veškerou auth
+      console.log('🔒 Detekováno nové okno/incognito - logout')
+      
+      // Vymaž localStorage auth
+      localStorage.removeItem('firebase_auth')
+      localStorage.removeItem('firebase_auth_user')
+      
+      // Vymaž sessionStorage
+      sessionStorage.clear()
+      
+      // Odhlásit z Firebase
+      signOut(auth).catch(() => {
+        console.log('Already logged out')
+      })
+      
+      // Vytvoř nové session ID
+      const newSessionId = Math.random().toString(36).substring(2, 15)
+      sessionStorage.setItem(sessionKey, newSessionId)
+      
+      setUser(null)
+      setLoading(false)
+      return
+    }
+
+    // Je to stejné okno - pokračuj normálně
     const timeout = setTimeout(() => {
       setLoading(false)
     }, 3000)
 
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       clearTimeout(timeout)
+      
       if (authUser) {
+        // Zkontroluj jestli je session stále validní
+        const currentSessionId = sessionStorage.getItem(sessionKey)
+        
+        if (!currentSessionId) {
+          // Session se vymazala - logout
+          console.log('🔒 Session vymazána - logout')
+          await signOut(auth)
+          setUser(null)
+          setLoading(false)
+          return
+        }
+
         setUser({
           uid: authUser.uid,
           email: authUser.email || '',
@@ -70,6 +113,35 @@ export const App: React.FC = () => {
       unsubscribe()
     }
   }, [setUser, setCategories, setTransactions, setGoals, setInvestments])
+
+  // DETEKUJ zavření okna - vymaž session
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Když se zavře okno, nevymazuj session (chceme aby příště fungovalo)
+      // Jen při novém incognito okně se detekuje že sesssionStorage je prázdný
+    }
+
+    const handleVisibilityChange = () => {
+      // Když se přepne na jiné okno a pak zpátky
+      const sessionKey = 'app_session_id'
+      const sessionId = sessionStorage.getItem(sessionKey)
+      
+      if (!sessionId && user) {
+        // Session zmizela ale uživatel je přihlášený = logout
+        console.log('🔒 Session zmizela - logout')
+        signOut(auth)
+        setUser(null)
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [user, setUser])
 
   if (loading) {
     return (
