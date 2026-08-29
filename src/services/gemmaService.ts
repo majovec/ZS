@@ -58,13 +58,11 @@ class GemmaService {
         return `🛑 Vyčerpal/a jsi svůj dnešní bezplatný limit ${this.MAX_DAILY_MESSAGES} zpráv. Pokračovat můžeš zase zítra! 💪`
       }
 
-      // Sestavíme historii zpráv pro REST API
       const contents = this.conversationHistory.map(msg => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: msg.content }]
       }))
 
-      // Přidáme aktuální zprávu s personou finančního poradce
       const promptWithPersona = `Jsi přátelský český finanční poradce pomáhající lidem s dluhy. Odpovídej věcně, stručně a lidsky. Uživatel píše: ${userMessage}`
       
       contents.push({
@@ -72,7 +70,6 @@ class GemmaService {
         parts: [{ text: promptWithPersona }]
       })
 
-      // Přímý endpoint pro Gemini 1.5 Flash na v1beta
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`
 
       const response = await fetch(url, {
@@ -89,9 +86,8 @@ class GemmaService {
       }
 
       const data = await response.json()
-      const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Omlouvám se, na tohle nedokázám odpovědět.'
+      const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Omlouvám se, na tohle nedokážám odpovědět.'
 
-      // Uložíme do historie
       this.conversationHistory.push({
         role: 'user',
         content: userMessage,
