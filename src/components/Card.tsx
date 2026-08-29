@@ -7,6 +7,10 @@ interface CardProps {
   className?: string
   style?: React.CSSProperties
   hover?: boolean
+  onMouseDown?: (e: React.MouseEvent) => void
+  onMouseUp?: (e: React.MouseEvent) => void
+  onTouchStart?: (e: React.TouchEvent) => void
+  onTouchEnd?: (e: React.TouchEvent) => void
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -15,6 +19,10 @@ export const Card: React.FC<CardProps> = ({
   className = '',
   style,
   hover = false,
+  onMouseDown,
+  onMouseUp,
+  onTouchStart,
+  onTouchEnd,
 }) => {
   const cardStyle: React.CSSProperties = {
     backgroundColor: colors.blackCard,
@@ -33,6 +41,10 @@ export const Card: React.FC<CardProps> = ({
         style={cardStyle}
         className={className}
         onClick={onClick}
+        onMouseDown={onMouseDown}
+        onMouseUp={onMouseUp}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-4px)'
           e.currentTarget.style.boxShadow = shadows.md
@@ -48,7 +60,15 @@ export const Card: React.FC<CardProps> = ({
   }
 
   return (
-    <div style={cardStyle} className={className}>
+    <div 
+      style={cardStyle} 
+      className={className}
+      onClick={onClick}
+      onMouseDown={onMouseDown}
+      onMouseUp={onMouseUp}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       {children}
     </div>
   )

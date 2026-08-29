@@ -11,6 +11,7 @@ interface ButtonProps {
   loading?: boolean
   type?: 'button' | 'submit' | 'reset'
   className?: string
+  style?: React.CSSProperties
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -23,6 +24,7 @@ export const Button: React.FC<ButtonProps> = ({
   loading = false,
   type = 'button',
   className = '',
+  style = {},
 }) => {
   const baseStyles: React.CSSProperties = {
     border: 'none',
@@ -72,6 +74,7 @@ export const Button: React.FC<ButtonProps> = ({
   const buttonStyle: React.CSSProperties = {
     ...variantStyles[variant],
     ...sizeStyles[size],
+    ...style,
   }
 
   return (

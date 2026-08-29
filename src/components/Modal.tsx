@@ -43,7 +43,6 @@ export const Modal: React.FC<ModalProps> = ({
           overflowY: 'auto',
           padding: spacing.lg,
         }}
-        onClick={(e) => e.stopPropagation()}
       >
         {title && (
           <h2
