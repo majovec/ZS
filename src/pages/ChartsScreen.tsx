@@ -8,10 +8,10 @@ interface ChartsScreenProps {
   onNavigate?: (page: string) => void
 }
 
-const ChartsScreen: React.FC<ChartsScreenProps> = ({ onNavigate }) => {
+const ChartsScreen: React.FC<ChartsScreenProps> = () => {
   const transactions = useAppStore((state) => state.transactions)
   const categories = useAppStore((state) => state.categories)
-  const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7))
+  const [currentMonth] = useState(new Date().toISOString().slice(0, 7))
 
   const categoryMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories])
 
@@ -63,7 +63,7 @@ const ChartsScreen: React.FC<ChartsScreenProps> = ({ onNavigate }) => {
         value: Math.round(value),
       }))
       .sort((a, b) => b.value - a.value)
-  }, [transactions, categories, currentMonth])
+  }, [transactions, categoryMap, currentMonth])
 
   const COLORS = [
     colors.gold,
@@ -71,7 +71,7 @@ const ChartsScreen: React.FC<ChartsScreenProps> = ({ onNavigate }) => {
     colors.redExpense,
     colors.orangeWarning,
     colors.blueInfo,
-    colors.purpleAccent,
+    colors.purpleUnexpected || colors.purple,
   ]
 
   return (
