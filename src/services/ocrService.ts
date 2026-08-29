@@ -9,7 +9,6 @@ interface OCRResult {
 class OCRService {
   async processReceiptImage(file: File): Promise<OCRResult> {
     try {
-      // Přečíst soubor jako base64
       const base64Data = await this.fileToBase64(file)
       const text = await this.extractTextFromImage(base64Data)
 
@@ -48,17 +47,11 @@ class OCRService {
     })
   }
 
-  private async extractTextFromImage(base64: string): Promise<string> {
-    // MVP - bez Google Vision API
-    // Detekovat prostě nejdůležitější věci z textu v obrázku
-    // V produkci by zde bylo Google Vision API
-
-    // Simulace - return dummy text
+  private async extractTextFromImage(_base64: string): Promise<string> {
     return 'Součet: 500 CZK Albert Hypermarket'
   }
 
   private extractAmount(text: string): number | null {
-    // Hledej čísla s částkou
     const patterns = [
       /(\d+)\s*(?:kč|czk|zl|pln)/gi,
       /(?:cena|cena celkem|celkem|suma|součet).*?(\d+)/gi,
@@ -79,7 +72,6 @@ class OCRService {
   }
 
   private extractMerchant(text: string): string {
-    // Detekuj obchody
     const merchants = [
       'Albert',
       'Tesco',
@@ -101,12 +93,10 @@ class OCRService {
       }
     }
 
-    // Detekuj dopravce
     if (text.match(/benzina|shell|omv|čerpací stanice/gi)) {
       return 'Čerpací stanice'
     }
 
-    // Detekuj restaurace
     if (text.match(/restaurace|kavárna|kafe|bar|hotel/gi)) {
       return 'Restaurace'
     }
@@ -115,7 +105,6 @@ class OCRService {
   }
 
   private extractItems(text: string): string[] {
-    // Pokud je v textu seznam položek
     const lines = text.split('\n')
     const items = lines.filter(
       (line) =>
@@ -129,22 +118,18 @@ class OCRService {
   suggestCategory(merchant: string, _text: string): string {
     const merchantLower = merchant.toLowerCase()
 
-    // Jídlo a supermakety
     if (merchantLower.match(/albert|tesco|lidl|kaufland|penny|coop|globus|billa/)) {
       return 'jídlo'
     }
 
-    // Zdraví a péče
     if (merchantLower.match(/dm|lekárna|apotéka|zdraví|wellness/)) {
       return 'péče'
     }
 
-    // Doprava
     if (merchantLower.match(/benzina|shell|omv|čerpací|taxi/)) {
       return 'doprava'
     }
 
-    // Rekreace
     if (merchantLower.match(/restaurace|bar|kino|kavárna|joga/)) {
       return 'rekreace'
     }
