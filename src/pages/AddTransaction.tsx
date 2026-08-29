@@ -29,7 +29,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ onNavigate }) => {
 
     setLoading(true)
     try {
-      await transactionsService.add(user.id, {
+      await transactionsService.addTransaction(user.uid, {
         type,
         categoryId,
         amount: parseFloat(amount),
@@ -110,14 +110,14 @@ const AddTransaction: React.FC<AddTransactionProps> = ({ onNavigate }) => {
           <div style={{ display: 'flex', gap: spacing.md }}>
             <Button
               variant={type === 'income' ? 'primary' : 'secondary'}
-              onClick={() => setType('income')}
+              onClick={() => setType('income' as TransactionType)}
               fullWidth
             >
               Příjem 💰
             </Button>
             <Button
               variant={type === 'expense' ? 'primary' : 'secondary'}
-              onClick={() => setType('expense')}
+              onClick={() => setType('expense' as TransactionType)}
               fullWidth
             >
               Výdaj 💸
