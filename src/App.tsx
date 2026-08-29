@@ -27,7 +27,6 @@ export const App: React.FC = () => {
   const setGoals = useAppStore((state) => state.setGoals)
   const setInvestments = useAppStore((state) => state.setInvestments)
 
-  // Auth listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
@@ -38,7 +37,6 @@ export const App: React.FC = () => {
           createdAt: new Date(),
         })
 
-        // Load user data
         try {
           const [categories, transactions, goals, investments] = await Promise.all([
             categoriesService.getCategories(authUser.uid),
@@ -57,6 +55,7 @@ export const App: React.FC = () => {
       } else {
         setUser(null)
       }
+
       setLoading(false)
     })
 
@@ -84,7 +83,21 @@ export const App: React.FC = () => {
     return <LoginScreen />
   }
 
-  // Render current page
+  const handleNavigate = (page: string) => {
+    if (
+      page === 'dashboard' ||
+      page === 'add-transaction' ||
+      page === 'chat' ||
+      page === 'settings' ||
+      page === 'goals' ||
+      page === 'investments' ||
+      page === 'history' ||
+      page === 'charts'
+    ) {
+      setCurrentPage(page)
+    }
+  }
+
   const renderPage = () => {
     switch (currentPage) {
       case 'add-transaction':
@@ -107,8 +120,9 @@ export const App: React.FC = () => {
         return <HistoryScreen />
       case 'charts':
         return <ChartsScreen />
+      case 'dashboard':
       default:
-        return <Dashboard onNavigate={setCurrentPage} />
+        return <Dashboard onNavigate={handleNavigate} />
     }
   }
 
@@ -121,12 +135,10 @@ export const App: React.FC = () => {
         backgroundColor: colors.blackDeep,
       }}
     >
-      {/* Main content */}
       <div style={{ flex: 1 }}>
         {renderPage()}
       </div>
 
-      {/* Bottom Navigation */}
       {currentPage !== 'add-transaction' && currentPage !== 'chat' && (
         <nav
           style={{
@@ -144,24 +156,28 @@ export const App: React.FC = () => {
             active={currentPage === 'dashboard'}
             onClick={() => setCurrentPage('dashboard')}
           />
+
           <NavButton
             icon="📈"
             label="Grafy"
             active={currentPage === 'charts'}
             onClick={() => setCurrentPage('charts')}
           />
+
           <NavButton
             icon="➕"
             label="Nový"
-            active={currentPage === 'add-transaction'}
+            active={false}
             onClick={() => setCurrentPage('add-transaction')}
           />
+
           <NavButton
             icon="🎯"
             label="Cíle"
             active={currentPage === 'goals'}
             onClick={() => setCurrentPage('goals')}
           />
+
           <NavButton
             icon="⚙️"
             label="Více"
