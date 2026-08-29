@@ -45,7 +45,6 @@ export default function App() {
   const user = useAppStore((state) => state.user)
   const setUser = useAppStore((state) => state.setUser)
 
-  // Auth listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
@@ -53,6 +52,7 @@ export default function App() {
           uid: currentUser.uid,
           email: currentUser.email || '',
           displayName: currentUser.displayName || 'Uživatel',
+          createdAt: new Date(),
         })
         setCurrentPage('dashboard')
       } else {
@@ -133,12 +133,8 @@ export default function App() {
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
     >
-      {/* Main content */}
-      <div style={{ flex: 1 }}>
-        {renderPage()}
-      </div>
+      <div style={{ flex: 1 }}>{renderPage()}</div>
 
-      {/* Bottom Navigation */}
       {!['add-transaction', 'chat'].includes(currentPage) && user && (
         <nav
           style={{
