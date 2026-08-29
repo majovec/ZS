@@ -22,8 +22,8 @@ class GemmaService {
   constructor() {
     try {
       if (this.part2) {
-        this.genAI = new GoogleGenerativeAI(this.apiKey)
-        // Inicializujeme čistě model bez nepodporovaných vlastností
+        // Přidali jsme apiVersion: 'v1beta', aby to 1.5 modely v pořádku našlo
+        this.genAI = new GoogleGenerativeAI(this.apiKey, { apiVersion: 'v1beta' })
         this.model = this.genAI.getGenerativeModel({ 
           model: 'gemini-1.5-flash'
         })
@@ -95,7 +95,6 @@ class GemmaService {
         }))
       })
 
-      // Přidáme systémovou instrukci přímo do kontextu zprávy, aby se choval jako finanční poradce
       const promptWithPersona = `Jsi přátelský český finanční poradce pomáhající lidem s dluhy. Odpovídej věcně, stručně a lidsky. Uživatel píše: ${userMessage}`
 
       const result = await chat.sendMessage(promptWithPersona)
