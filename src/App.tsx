@@ -1,112 +1,118 @@
-import React, { useEffect, useState } from 'react'
-import { onAuthStateChanged } from 'firebase/auth'
+import React, { useState, useEffect } from 'react'
 import { auth } from '@/services/firebase'
-import { useAppStore } from '@/store/appStore'
-import { categoriesService, transactionsService, goalsService, investmentsService } from '@/services/firestoreService'
-import { LoginScreen } from '@/pages/LoginScreen'
-import { Dashboard } from '@/pages/Dashboard'
-import { AddTransaction } from '@/pages/AddTransaction'
-import { ChatScreen } from '@/pages/ChatScreen'
-import { SettingsScreen } from '@/pages/SettingsScreen'
-import { GoalsScreen } from '@/pages/GoalsScreen'
-import { InvestmentsScreen } from '@/pages/InvestmentsScreen'
-import { HistoryScreen } from '@/pages/HistoryScreen'
-import { ChartsScreen } from '@/pages/ChartsScreen'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { colors, spacing } from '@/theme/colors'
+import { useAppStore } from '@/store/appStore'
+import LoginScreen from '@/pages/LoginScreen'
+import Dashboard from '@/pages/Dashboard'
+import AddTransaction from '@/pages/AddTransaction'
+import ChatScreen from '@/pages/ChatScreen'
+import HistoryScreen from '@/pages/HistoryScreen'
+import ChartsScreen from '@/pages/ChartsScreen'
+import GoalsScreen from '@/pages/GoalsScreen'
+import InvestmentsScreen from '@/pages/InvestmentsScreen'
+import SettingsScreen from '@/pages/SettingsScreen'
 
-type Page = 'dashboard' | 'add-transaction' | 'chat' | 'settings' | 'goals' | 'investments' | 'history' | 'charts'
+type Page =
+  | 'login'
+  | 'dashboard'
+  | 'add-transaction'
+  | 'chat'
+  | 'history'
+  | 'charts'
+  | 'goals'
+  | 'investments'
+  | 'settings'
 
-export const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<Page>('dashboard')
-  const [loading, setLoading] = useState(true)
+interface NavItem {
+  id: Page
+  icon: string
+  label: string
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { id: 'dashboard', icon: '📊', label: 'Dashboard' },
+  { id: 'history', icon: '📋', label: 'Historie' },
+  { id: 'charts', icon: '📈', label: 'Grafy' },
+  { id: 'goals', icon: '🎯', label: 'Cíle' },
+  { id: 'investments', icon: '💰', label: 'Spoření' },
+]
+
+function App() {
+  const [currentPage, setCurrentPage] = useState<Page>('login')
+  const [isLoading, setIsLoading] = useState(true)
 
   const user = useAppStore((state) => state.user)
   const setUser = useAppStore((state) => state.setUser)
-  const setCategories = useAppStore((state) => state.setCategories)
-  const setTransactions = useAppStore((state) => state.setTransactions)
-  const setGoals = useAppStore((state) => state.setGoals)
-  const setInvestments = useAppStore((state) => state.setInvestments)
 
   // Auth listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      if (authUser) {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
         setUser({
-          uid: authUser.uid,
-          email: authUser.email || '',
-          displayName: authUser.displayName || '',
-          createdAt: new Date(),
+          id: currentUser.uid,
+          email: currentUser.email || '',
+          displayName: currentUser.displayName || 'Uživatel',
         })
-
-        // Load user data
-        try {
-          const [categories, transactions, goals, investments] = await Promise.all([
-            categoriesService.getCategories(authUser.uid),
-            transactionsService.getTransactions(authUser.uid),
-            goalsService.getGoals(authUser.uid),
-            investmentsService.getInvestments(authUser.uid),
-          ])
-
-          setCategories(categories)
-          setTransactions(transactions)
-          setGoals(goals)
-          setInvestments(investments)
-        } catch (error) {
-          console.error('Error loading user data:', error)
-        }
+        setCurrentPage('dashboard')
       } else {
         setUser(null)
+        setCurrentPage('login')
       }
-      setLoading(false)
+      setIsLoading(false)
     })
 
-    return unsubscribe
-  }, [setUser, setCategories, setTransactions, setGoals, setInvestments])
+    return () => unsubscribe()
+  }, [setUser])
 
-  if (loading) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-          backgroundColor: colors.blackDeep,
-          color: colors.textPrimary,
-        }}
-      >
-        <p>Nahrávám aplikaci...</p>
-      </div>
-    )
+  const handleLogout = async () => {
+    try {
+      await signOut(auth)
+      setCurrentPage('login')
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
   }
 
-  if (!user) {
-    return <LoginScreen />
-  }
-
-  // Render current page
   const renderPage = () => {
+    if (isLoading) {
+      return (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100vh',
+            color: colors.gold,
+            fontSize: '20px',
+          }}
+        >
+          ⏳ Načítání...
+        </div>
+      )
+    }
+
+    if (!user) {
+      return <LoginScreen />
+    }
+
     switch (currentPage) {
+      case 'dashboard':
+        return <Dashboard onNavigate={(page: Page) => setCurrentPage(page as Page)} />
       case 'add-transaction':
-        return (
-          <AddTransaction
-            onComplete={() => {
-              setCurrentPage('dashboard')
-            }}
-          />
-        )
+        return <AddTransaction onNavigate={setCurrentPage} />
       case 'chat':
-        return <ChatScreen />
-      case 'settings':
-        return <SettingsScreen />
-      case 'goals':
-        return <GoalsScreen />
-      case 'investments':
-        return <InvestmentsScreen />
+        return <ChatScreen onNavigate={setCurrentPage} />
       case 'history':
-        return <HistoryScreen />
+        return <HistoryScreen onNavigate={setCurrentPage} />
       case 'charts':
-        return <ChartsScreen />
+        return <ChartsScreen onNavigate={setCurrentPage} />
+      case 'goals':
+        return <GoalsScreen onNavigate={setCurrentPage} />
+      case 'investments':
+        return <InvestmentsScreen onNavigate={setCurrentPage} />
+      case 'settings':
+        return <SettingsScreen onNavigate={setCurrentPage} onLogout={handleLogout} />
       default:
         return <Dashboard onNavigate={(page: Page) => setCurrentPage(page as Page)} />
     }
@@ -115,10 +121,12 @@ export const App: React.FC = () => {
   return (
     <div
       style={{
+        backgroundColor: colors.blackDeep,
+        color: colors.textPrimary,
+        minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '100vh',
-        backgroundColor: colors.blackDeep,
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
     >
       {/* Main content */}
@@ -127,78 +135,56 @@ export const App: React.FC = () => {
       </div>
 
       {/* Bottom Navigation */}
-      {currentPage !== 'add-transaction' && (
+      {!['add-transaction', 'chat'].includes(currentPage) && user && (
         <nav
           style={{
+            backgroundColor: colors.blackCard,
             borderTop: `1px solid ${colors.border}`,
-            backgroundColor: colors.blackSurface,
-            padding: `${spacing.sm} 0`,
             display: 'grid',
             gridTemplateColumns: 'repeat(5, 1fr)',
-            gap: spacing.sm,
+            padding: `${spacing.sm} 0`,
+            position: 'sticky',
+            bottom: 0,
+            zIndex: 100,
           }}
         >
-          <NavButton
-            icon="📊"
-            label="Přehled"
-            active={currentPage === 'dashboard'}
-            onClick={() => setCurrentPage('dashboard')}
-          />
-          <NavButton
-            icon="📈"
-            label="Grafy"
-            active={currentPage === 'charts'}
-            onClick={() => setCurrentPage('charts')}
-          />
-          <NavButton
-            icon="➕"
-            label="Nový"
-            active={!['add-transaction', 'chat'].includes(currentPage) && (
-            onClick={() => setCurrentPage('add-transaction')}
-          />
-          <NavButton
-            icon="🎯"
-            label="Cíle"
-            active={currentPage === 'goals'}
-            onClick={() => setCurrentPage('goals')}
-          />
-          <NavButton
-            icon="⚙️"
-            label="Více"
-            active={false}
-            onClick={() => setCurrentPage('settings')}
-          />
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setCurrentPage(item.id)}
+              style={{
+                backgroundColor: currentPage === item.id ? colors.gold + '20' : 'transparent',
+                border: 'none',
+                color: currentPage === item.id ? colors.gold : colors.textSecondary,
+                cursor: 'pointer',
+                padding: spacing.md,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: spacing.xs,
+                fontSize: '12px',
+                fontWeight: currentPage === item.id ? '600' : '400',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (currentPage !== item.id) {
+                  e.currentTarget.style.color = colors.gold
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (currentPage !== item.id) {
+                  e.currentTarget.style.color = colors.textSecondary
+                }
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
         </nav>
       )}
     </div>
   )
 }
 
-interface NavButtonProps {
-  icon: string
-  label: string
-  active: boolean
-  onClick: () => void
-}
-
-const NavButton: React.FC<NavButtonProps> = ({ icon, label, active, onClick }) => (
-  <button
-    onClick={onClick}
-    style={{
-      background: 'none',
-      border: 'none',
-      color: active ? colors.gold : colors.textSecondary,
-      cursor: 'pointer',
-      padding: spacing.md,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: spacing.sm,
-      fontSize: '24px',
-      transition: 'color 0.3s ease',
-    }}
-  >
-    <span>{icon}</span>
-    <span style={{ fontSize: '11px' }}>{label}</span>
-  </button>
-)
+export default App
