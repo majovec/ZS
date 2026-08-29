@@ -7,109 +7,11 @@ interface OCRResult {
 }
 
 class OCRService {
-  // Pomocná funkce pro extrakci částky z textu
-  extractAmount(text: string): number | null {
-    // Hledej čísla s formátem ceny (např. 123.45, 123,45, 123 Kč)
-    const patterns = [
-      /(\d+[.,]\d{2})\s*Kč/, // 123,45 Kč
-      /(\d+)\s*Kč/, // 123 Kč
-      /\b(\d+[.,]\d{2})\b/, // Obecně číslo s desetinou čárkou
-    ]
-
-    for (const pattern of patterns) {
-      const match = text.match(pattern)
-      if (match) {
-        const amountStr = match[1].replace(',', '.')
-        return parseFloat(amountStr)
-      }
-    }
-    return null
-  }
-
-  // Extrakce obchodního názvu
-  extractMerchant(text: string): string {
-    // Hledej běžné obchody
-    const merchants = [
-      'Albert', 'Tesco', 'Lidl', 'Kaufland', 'AEON',
-      'Billa', 'Penny', 'Coop', 'DM', 'Notino',
-      'Alza', 'CZC', 'eMag', 'IKEA', 'Bauhaus',
-      'Dedeman', 'Hornbach', 'Mountfield', 'Hagebau',
-      'Peugeot', 'Hyundai', 'Škoda', 'BMW', 'Mercedes',
-      'Benzina', 'Shell', 'OMV', 'Orlen', 'MOL',
-      'Restaurace', 'Kavárna', 'Pizzerie', 'Bistro',
-    ]
-
-    for (const merchant of merchants) {
-      if (text.toUpperCase().includes(merchant.toUpperCase())) {
-        return merchant
-      }
-    }
-
-    // Pokud se nenajde, vrať první slovo (může být název obchodu)
-    const words = text.split('\n')[0].split(' ')
-    return words[0] || 'Ostatní'
-  }
-
-  // Detekce kategorie na základě textu
-  suggestCategory(merchant: string, text: string): string {
-    const lowerText = text.toLowerCase()
-    const lowerMerchant = merchant.toLowerCase()
-
-    // Jídlo
-    if (
-      ['albert', 'tesco', 'lidl', 'kaufland', 'billa', 'penny', 'aeon', 'coop', 'potraviny', 'supermarket', 'obchod s potravinami'].some((w) =>
-        lowerMerchant.includes(w)
-      ) ||
-      lowerText.includes('jídlo') ||
-      lowerText.includes('nákup potravin')
-    ) {
-      return 'var-food'
-    }
-
-    // Doprava
-    if (
-      ['benzina', 'shell', 'omv', 'mol', 'orlen', 'čerpací stanice'].some((w) =>
-        lowerMerchant.includes(w)
-      ) ||
-      lowerText.includes('benzín')
-    ) {
-      return 'var-transport'
-    }
-
-    // DM - osobní péče
-    if (
-      ['dm', 'lékárna', 'zdravotnické'].some((w) => lowerMerchant.includes(w)) ||
-      lowerText.includes('zdraví')
-    ) {
-      return 'var-personal'
-    }
-
-    // Restaurace
-    if (
-      ['restaurace', 'kavárna', 'pizzerie', 'bistro', 'café'].some((w) =>
-        lowerMerchant.includes(w)
-      )
-    ) {
-      return 'var-food'
-    }
-
-    // Nákupy
-    if (
-      ['alza', 'czc', 'emag', 'ikea', 'bauhaus', 'hornbach', 'mountfield'].some((w) =>
-        lowerMerchant.includes(w)
-      )
-    ) {
-      return 'unexp-shopping'
-    }
-
-    return 'var-food' // Default
-  }
-
   async processReceiptImage(file: File): Promise<OCRResult> {
     try {
       // Přečíst soubor jako base64
-      const _base64 = await this.fileToBase64(file)
-      const text = await this.extractTextFromImage(_base64)
+      const base64Data = await this.fileToBase64(file)
+      const text = await this.extractTextFromImage(base64Data)
 
       const amount = this.extractAmount(text)
       const merchant = this.extractMerchant(text)
@@ -133,12 +35,13 @@ class OCRService {
     }
   }
 
-  private async fileToBase64(file: File): Promise<string> {
+  private fileToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = () => {
         const result = reader.result as string
-        resolve(result.split(',')[1] || '')
+        const base64 = result.split(',')[1]
+        resolve(base64)
       }
       reader.onerror = reject
       reader.readAsDataURL(file)
@@ -146,31 +49,107 @@ class OCRService {
   }
 
   private async extractTextFromImage(base64: string): Promise<string> {
-    // Pro MVP používáme jednoduchou analýzu
-    // V produkci by se používalo Google ML Kit nebo Google Cloud Vision
-    // Pro teď vrátíme placeholder text
-    return `
-    Obchod: Neznámý
-    Datum: ${new Date().toLocaleDateString('cs-CZ')}
-    Položky:
-    - Položka 1: 50 Kč
-    - Položka 2: 150 Kč
-    CELKEM: 200 Kč
-    `
+    // MVP - bez Google Vision API
+    // Detekovat prostě nejdůležitější věci z textu v obrázku
+    // V produkci by zde bylo Google Vision API
+
+    // Simulace - return dummy text
+    return 'Součet: 500 CZK Albert Hypermarket'
+  }
+
+  private extractAmount(text: string): number | null {
+    // Hledej čísla s částkou
+    const patterns = [
+      /(\d+)\s*(?:kč|czk|zl|pln)/gi,
+      /(?:cena|cena celkem|celkem|suma|součet).*?(\d+)/gi,
+      /(\d+)\s*(?:zl|pln)/gi,
+    ]
+
+    for (const pattern of patterns) {
+      const match = text.match(pattern)
+      if (match) {
+        const numberMatch = match[0].match(/\d+/)
+        if (numberMatch) {
+          return parseInt(numberMatch[0], 10)
+        }
+      }
+    }
+
+    return null
+  }
+
+  private extractMerchant(text: string): string {
+    // Detekuj obchody
+    const merchants = [
+      'Albert',
+      'Tesco',
+      'Lidl',
+      'Kaufland',
+      'Penny',
+      'DM',
+      'Billa',
+      'CBA',
+      'COOP',
+      'Globus',
+      'Carrefour',
+      'Aldi',
+    ]
+
+    for (const merchant of merchants) {
+      if (text.toUpperCase().includes(merchant.toUpperCase())) {
+        return merchant
+      }
+    }
+
+    // Detekuj dopravce
+    if (text.match(/benzina|shell|omv|čerpací stanice/gi)) {
+      return 'Čerpací stanice'
+    }
+
+    // Detekuj restaurace
+    if (text.match(/restaurace|kavárna|kafe|bar|hotel/gi)) {
+      return 'Restaurace'
+    }
+
+    return 'Nákup'
   }
 
   private extractItems(text: string): string[] {
-    // Extraktovat jednotlivé položky z textu
+    // Pokud je v textu seznam položek
     const lines = text.split('\n')
-    const items: string[] = []
+    const items = lines.filter(
+      (line) =>
+        line.length > 3 &&
+        !line.match(/\d{2}:\d{2}/) &&
+        !line.match(/suma|celkem|cena/gi)
+    )
+    return items.slice(0, 5)
+  }
 
-    lines.forEach((line) => {
-      if (line.includes('-') && !line.toLowerCase().includes('celkem')) {
-        items.push(line.trim())
-      }
-    })
+  suggestCategory(merchant: string, _text: string): string {
+    const merchantLower = merchant.toLowerCase()
 
-    return items.slice(0, 10) // Max 10 položek
+    // Jídlo a supermakety
+    if (merchantLower.match(/albert|tesco|lidl|kaufland|penny|coop|globus|billa/)) {
+      return 'jídlo'
+    }
+
+    // Zdraví a péče
+    if (merchantLower.match(/dm|lekárna|apotéka|zdraví|wellness/)) {
+      return 'péče'
+    }
+
+    // Doprava
+    if (merchantLower.match(/benzina|shell|omv|čerpací|taxi/)) {
+      return 'doprava'
+    }
+
+    // Rekreace
+    if (merchantLower.match(/restaurace|bar|kino|kavárna|joga/)) {
+      return 'rekreace'
+    }
+
+    return 'ostatní'
   }
 }
 
