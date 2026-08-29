@@ -108,7 +108,7 @@ export const App: React.FC = () => {
       case 'charts':
         return <ChartsScreen />
       default:
-        return <Dashboard onNavigate={setCurrentPage} />
+        return <Dashboard onNavigate={(page: Page) => setCurrentPage(page as Page)} />
     }
   }
 
@@ -153,7 +153,7 @@ export const App: React.FC = () => {
           <NavButton
             icon="➕"
             label="Nový"
-            active={currentPage === 'add-transaction'}
+            active={!['add-transaction', 'chat'].includes(currentPage) && (
             onClick={() => setCurrentPage('add-transaction')}
           />
           <NavButton
