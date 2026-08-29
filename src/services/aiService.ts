@@ -11,14 +11,7 @@ class AIEngine {
   private gemmaReady = false
   private gemmaInitialized = false
 
-  private SYSTEM_PROMPT = `
-    Jsi přátelský asistent v aplikaci pro správu osobních financí.
-    Můžeš diskutovat o čemkoliv, ale vždy se snaž vrátit k financím.
-    Odpovídej v češtině, bud přátelský a pomocný.
-    Pokud se uživatel ptá na něco mimo finance, odpověz a pak zmíň finance.
-    Používej motivační slova: Znovu silnější, Držíš to, Máš to pod kontrolou.
-  `
-
+  
   async initialize(): Promise<void> {
     if (this.gemmaInitialized) return
 
