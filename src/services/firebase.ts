@@ -5,16 +5,28 @@ import { getStorage } from 'firebase/storage'
 import { getMessaging, onMessage } from 'firebase/messaging'
 
 // Tvůj Firebase config - nahraď vlastními hodnotami
-const firebaseConfig = {
-  apiKey: 'AIzaSyDxxx',
-  authDomain: 'finance-pod-kontrolou.firebaseapp.com',
-  projectId: 'finance-pod-kontrolou',
-  storageBucket: 'finance-pod-kontrolou.appspot.com',
-  messagingSenderId: 'xxx',
-  appId: '1:xxx:web:xxx',
-}
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-const app = initializeApp(firebaseConfig)
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyAbSOdstuMQEySmRtb_9SMKqxJHmhbk0oE",
+  authDomain: "finance-pod-kontrolou.firebaseapp.com",
+  projectId: "finance-pod-kontrolou",
+  storageBucket: "finance-pod-kontrolou.firebasestorage.app",
+  messagingSenderId: "839958398366",
+  appId: "1:839958398366:web:2df718aabf2d8c9e7a028f",
+  measurementId: "G-N1WVX44NPN"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
 
 export const auth = getAuth(app)
 export const db = getFirestore(app)
