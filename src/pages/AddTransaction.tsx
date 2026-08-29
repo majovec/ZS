@@ -6,7 +6,7 @@ import { ocrService } from '@/services/ocrService'
 import { Input } from '@/components/Input'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
-import { TransactionType } from '@/models/types'
+import { TransactionType, TransactionSource } from '@/models/types'
 
 export const AddTransaction: React.FC<{
   onComplete: () => void
@@ -38,7 +38,7 @@ export const AddTransaction: React.FC<{
         amount: parseFloat(amount),
         note,
         date: new Date(),
-        source: 'manual',
+        source: TransactionSource.MANUAL,
         createdAt: new Date(),
       })
 
@@ -91,7 +91,6 @@ export const AddTransaction: React.FC<{
     >
       <h1 style={{ marginBottom: spacing.lg }}>Nový zápis</h1>
 
-      {/* Type Toggle */}
       <div
         style={{
           display: 'flex',
@@ -116,7 +115,6 @@ export const AddTransaction: React.FC<{
       </div>
 
       <form onSubmit={handleSubmit}>
-        {/* Category Select */}
         <label
           style={{
             display: 'block',
@@ -128,6 +126,7 @@ export const AddTransaction: React.FC<{
         >
           Kategorie
         </label>
+
         <select
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
@@ -150,7 +149,6 @@ export const AddTransaction: React.FC<{
           ))}
         </select>
 
-        {/* Amount */}
         <Input
           type="number"
           label="Částka (Kč)"
@@ -159,7 +157,6 @@ export const AddTransaction: React.FC<{
           onChange={setAmount}
         />
 
-        {/* Note */}
         <Input
           type="text"
           label="Poznámka"
@@ -168,7 +165,6 @@ export const AddTransaction: React.FC<{
           onChange={setNote}
         />
 
-        {/* OCR Button */}
         <label
           style={{
             display: 'block',
@@ -216,7 +212,6 @@ export const AddTransaction: React.FC<{
         </Button>
       </form>
 
-      {/* OCR Result Modal */}
       {showOcrResult && ocrResult && (
         <div
           style={{
@@ -239,12 +234,15 @@ export const AddTransaction: React.FC<{
             }}
           >
             <h2 style={{ marginBottom: spacing.md }}>Výsledek skenování</h2>
+
             <p>
               <strong>Obchod:</strong> {ocrResult.merchant}
             </p>
+
             <p>
               <strong>Částka:</strong> {ocrResult.amount} Kč
             </p>
+
             <p style={{ fontSize: '12px', color: colors.textSecondary }}>
               Důvěra: {Math.round(ocrResult.confidence * 100)}%
             </p>
@@ -256,12 +254,10 @@ export const AddTransaction: React.FC<{
                 marginTop: spacing.lg,
               }}
             >
-              <Button
-                fullWidth
-                onClick={applyOcrResult}
-              >
+              <Button fullWidth onClick={applyOcrResult}>
                 Použít
               </Button>
+
               <Button
                 variant="secondary"
                 fullWidth
