@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { colors, spacing, typography } from '@/theme/colors'
+import { colors, spacing } from '@/theme/colors'
 import { useAppStore } from '@/store/appStore'
 import { transactionsService, categoriesService } from '@/services/firestoreService'
 import { Card } from '@/components/Card'
@@ -13,7 +13,6 @@ export const Dashboard: React.FC<{
   const setCategories = useAppStore((state) => state.setCategories)
   const logoTapCount = useAppStore((state) => state.logoTapCount)
   const setLogoTapCount = useAppStore((state) => state.setLogoTapCount)
-  const setShowSecretScreen = useAppStore((state) => state.setShowSecretScreen)
   const setShowAddTransactionModal = useAppStore(
     (state) => state.setShowAddTransactionModal
   )

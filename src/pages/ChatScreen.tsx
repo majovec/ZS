@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react'
 import { colors, spacing } from '@/theme/colors'
 import { useAppStore } from '@/store/appStore'
 import { aiEngine } from '@/services/aiService'
-import { Input } from '@/components/Input'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 

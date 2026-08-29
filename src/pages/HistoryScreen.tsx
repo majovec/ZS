@@ -13,7 +13,7 @@ export const HistoryScreen: React.FC = () => {
   )
 
   const groupedTransactions = useMemo(() => {
-    const grouped: Record<string, typeof transactions> = {}
+    const grouped: Record<string, (typeof transactions)> = {}
 
     transactions.forEach((tx) => {
       const monthKey = new Date(tx.date).toLocaleDateString('cs-CZ', {

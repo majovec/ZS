@@ -27,12 +27,10 @@ export const ChartsScreen: React.FC = () => {
       }
     })
 
-    return Object.entries(expenses)
-      .map(([name, value]) => ({
-        name,
-        value: Math.round(value),
-      }))
-      .sort((a, b) => b.value - a.value)
+    return Object.entries(expenses).map(([name, value]) => ({
+      name,
+      value: Math.round(value),
+    })).sort((a, b) => b.value - a.value)
   }, [transactions, categories, currentMonth])
 
   // Data pro měsíční trend

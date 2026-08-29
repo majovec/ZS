@@ -14,7 +14,7 @@ export const GoalsScreen: React.FC = () => {
 
   const [showAddForm, setShowAddForm] = useState(false)
   const [title, setTitle] = useState('')
-  const [type, setType] = useState<GoalType>(GoalType.DEBT_PAYOFF)
+  const [type, setType] = useState<GoalType>(GoalType.DEBT_PAYOFF as GoalType)
   const [targetAmount, setTargetAmount] = useState('')
   const [loading, setLoading] = useState(false)
 
