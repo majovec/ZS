@@ -15,7 +15,6 @@ const ChartsScreen: React.FC<ChartsScreenProps> = () => {
 
   const categoryMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories])
 
-  // Měsíční trend (poslední 6 měsíců)
   const monthlyTrend = useMemo(() => {
     const last6Months: Record<string, { income: number; expense: number }> = {}
     const now = new Date()
@@ -44,7 +43,6 @@ const ChartsScreen: React.FC<ChartsScreenProps> = () => {
     }))
   }, [transactions])
 
-  // Data pro výdaje po kategoriích
   const categoryExpenses = useMemo(() => {
     const currentMonthStr = currentMonth || new Date().toISOString().slice(0, 7)
     const expenses: Record<string, number> = {}
@@ -71,14 +69,13 @@ const ChartsScreen: React.FC<ChartsScreenProps> = () => {
     colors.redExpense,
     colors.orangeWarning,
     colors.blueInfo,
-    colors.purpleUnexpected || colors.purple,
+    colors.purpleUnexpected,
   ]
 
   return (
     <div style={{ padding: spacing.md, paddingBottom: 100 }}>
       <h1 style={{ marginTop: 0, color: colors.gold }}>📊 Grafy a Analytika</h1>
 
-      {/* Měsíční trend */}
       <Card style={{ marginBottom: spacing.lg }}>
         <h2 style={{ marginTop: 0, color: colors.gold, fontSize: '16px' }}>Trend (posledních 6 měsíců)</h2>
         <ResponsiveContainer width="100%" height={300}>
@@ -99,7 +96,6 @@ const ChartsScreen: React.FC<ChartsScreenProps> = () => {
         </ResponsiveContainer>
       </Card>
 
-      {/* Výdaje po kategoriích */}
       <Card style={{ marginBottom: spacing.lg }}>
         <h2 style={{ marginTop: 0, color: colors.gold, fontSize: '16px' }}>
           Výdaje po kategoriích ({currentMonth})
