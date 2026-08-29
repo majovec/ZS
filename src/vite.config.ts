@@ -79,4 +79,21 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  optimizeDeps: {
+    exclude: ['@huggingface/transformers'],
+  },
+  build: {
+    target: 'esnext',
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('firebase')) return 'vendor-firebase';
+            if (id.includes('recharts')) return 'vendor-charts';
+            return 'vendor';
+          }
+        }
+      }
+    }
+  }
 })
