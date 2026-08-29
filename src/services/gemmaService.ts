@@ -4,55 +4,18 @@ interface GemmaMessage {
 }
 
 class GemmaService {
-  private pipe: any = null
-  private isLoading = false
   private conversationHistory: GemmaMessage[] = []
-  private lastStatus = 'Zatím nespuštěno'
+  private lastStatus = 'Aktivní a připravena'
 
   async initialize(): Promise<void> {
-    if (this.pipe) return
-
-    try {
-      this.isLoading = true
-      this.lastStatus = 'Stahuji AI model z CDN (může to chvíli trvat)...'
-      console.log('🤖 ' + this.lastStatus)
-
-      const transformers = await (new Function("url_str", "return import(url_str)"))(
-        'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.1.0'
-      )
-      const { pipeline, env } = transformers
-
-      env.allowLocalModels = true
-      env.allowRemoteModels = true
-      env.allowPatterns = ['.*']
-
-      this.lastStatus = 'Inicializuji model v paměti...'
-      
-      this.pipe = await pipeline(
-        'text2text-generation',
-        'Xenova/LaMini-Flan-T5-248M'
-      )
-
-      this.lastStatus = 'AI je plně připravená!'
-      console.log('✅ ' + this.lastStatus)
-      this.isLoading = false
-    } catch (error: any) {
-      this.lastStatus = 'Chyba: ' + (error?.message || error)
-      console.error('❌ ' + this.lastStatus, error)
-      this.isLoading = false
-      throw error
-    }
+    this.lastStatus = 'Připraveno'
+    console.log('✅ AI Service připravena')
   }
 
   async chat(userMessage: string): Promise<string> {
     try {
-      // Speciální příkaz pro zjištění stavu přímo z chatu
       if (userMessage.trim() === '/status') {
-        return `📊 Stav AI: ${this.lastStatus} | Připraveno: ${!!this.pipe}`
-      }
-
-      if (!this.pipe) {
-        await this.initialize()
+        return `📊 Stav AI: ${this.lastStatus}`
       }
 
       this.conversationHistory.push({
@@ -60,42 +23,52 @@ class GemmaService {
         content: userMessage,
       })
 
-      const prompt = this.buildPrompt(userMessage)
+      const response = await fetch(
+        'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            inputs: `[INST] Jsi český finanční poradce specializující se na pomoc lidem v dluzích. Odpověz na otázku uživatele věcně, užitečně a v češtině. Žádné vyhýbavé fráze.\n\nUživatel: ${userMessage} [/INST]`,
+            parameters: {
+              max_new_length: 250,
+              temperature: 0.5,
+              return_full_text: false,
+            },
+          }),
+        }
+      )
 
-      const result = await this.pipe(prompt, {
-        max_length: 150,
-        temperature: 0.7,
-        top_p: 0.9,
-      })
+      if (!response.ok) {
+        throw new Error('Chyba komunikace se serverem.')
+      }
 
-      const response =
-        result[0]?.generated_text ||
-        'Omlouvám se, na tohle nedokázám odpovědět.'
+      const data = await response.json()
+      
+      let aiResponse = ''
+      if (Array.isArray(data) && data[0]?.generated_text) {
+        aiResponse = data[0].generated_text
+      } else if (data?.generated_text) {
+        aiResponse = data.generated_text
+      }
+
+      aiResponse = aiResponse.replace(/\[\/INST\]/g, '').trim()
+
+      if (!aiResponse) {
+        aiResponse = 'Zkus mi položit konkrétnější otázku ohledně tvých výdajů nebo dluhů, abych ti mohl spočítat plán.'
+      }
 
       this.conversationHistory.push({
         role: 'assistant',
-        content: response,
+        content: aiResponse,
       })
 
-      return response
+      return aiResponse
     } catch (error: any) {
-      return `⚠️ Chyba při běhu AI: ${error?.message || error}`
+      return 'Omlouvám se, spojení s AI se na chvíli přerušilo. Zkus to za chvíli zopakovat.'
     }
-  }
-
-  private buildPrompt(userMessage: string): string {
-    const history = this.conversationHistory
-      .slice(-4)
-      .map((msg) => `${msg.role === 'user' ? 'Uživatel' : 'Asistent'}: ${msg.content}`)
-      .join('\n')
-
-    return `Jsi přátelský finanční poradce. Pomáháš lidem dostat se z dluhů. Odpovídej v češtině, stručně a motivující.
-
-${history}
-
-Uživatel: ${userMessage}
-
-Asistent:`
   }
 
   clearHistory(): void {
@@ -107,7 +80,7 @@ Asistent:`
   }
 
   isReady(): boolean {
-    return !!this.pipe && !this.isLoading
+    return true
   }
 
   getLoadingStatus(): string {
