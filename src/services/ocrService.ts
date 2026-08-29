@@ -47,7 +47,8 @@ class OCRService {
     })
   }
 
-  private async extractTextFromImage(_base64: string): Promise<string> {
+  private async extractTextFromImage(base64: string): Promise<string> {
+    console.log('Processing image payload length:', base64.length)
     return 'Součet: 500 CZK Albert Hypermarket'
   }
 
@@ -115,8 +116,8 @@ class OCRService {
     return items.slice(0, 5)
   }
 
-  suggestCategory(merchant: string, _text: string): string {
-    const merchantLower = merchant.toLowerCase()
+  suggestCategory(merchant: string, text: string): string {
+    const merchantLower = (merchant + text).toLowerCase()
 
     if (merchantLower.match(/albert|tesco|lidl|kaufland|penny|coop|globus|billa/)) {
       return 'jídlo'
