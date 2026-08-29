@@ -15,10 +15,11 @@ class GemmaService {
       this.isLoading = true
       console.log('🤖 Inicializuji Gemmu přes CDN...')
 
-      // @ts-ignore
-      const { pipeline, env } = await import(
+      // Dynamické vyhodnocení pro obcházení kontroly TypeScriptu i Vite bundleru
+      const transformers = await (new Function("url_str", "return import(url_str)"))(
         'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.1.0'
       )
+      const { pipeline, env } = transformers
 
       env.allowLocalModels = true
       env.allowRemoteModels = true
