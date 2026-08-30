@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app'
-import { getAnalytics } from 'firebase/analytics'
+import { getAnalytics, Analytics } from 'firebase/analytics'
 import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 import { getMessaging, onMessage } from 'firebase/messaging'
 
@@ -18,11 +18,26 @@ const firebaseConfig = {
 // Inicializace Firebase
 const app = initializeApp(firebaseConfig)
 
-// Analytics (přidán export, aby TypeScript nehlásil nepoužitou proměnnou)
-export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null
+let analytics: Analytics | null = null
+if (typeof window !== 'undefined') {
+  try {
+    analytics = getAnalytics(app)
+  } catch (error) {
+    console.info('Analytics není v tomto prostředí dostupná:', error)
+  }
+}
+export { analytics }
 
 export const auth = getAuth(app)
 export const db = getFirestore(app)
+
+// Keep Firestore data available offline. Firebase falls back to memory/network
+// automatically when IndexedDB persistence cannot be enabled (e.g. another tab).
+if (typeof window !== 'undefined') {
+  enableIndexedDbPersistence(db).catch((error) => {
+    console.info('Firestore offline persistence unavailable:', error?.code || error)
+  })
+}
 export const storage = getStorage(app)
 
 // Firebase Messaging pro notifikace
@@ -37,7 +52,7 @@ try {
     if ('Notification' in window) {
       new Notification(payload.notification?.title || 'Finance pod kontrolou', {
         body: payload.notification?.body || 'Nová zpráva',
-        icon: '/pwa-192x192.png',
+        icon: `${import.meta.env.BASE_URL}android_192x192.png`,
       })
     }
   })

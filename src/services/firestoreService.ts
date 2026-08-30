@@ -97,14 +97,15 @@ export const transactionsService = {
 
   async getTransactionsByMonth(userId: string, yearMonth: string): Promise<Transaction[]> {
     try {
+      const [year, month] = yearMonth.split('-').map(Number)
+      const start = new Date(year, month - 1, 1)
+      const end = new Date(year, month, 1)
       const querySnapshot = await getDocs(
         query(
           collection(db, USERS_COLLECTION, userId, 'transactions'),
-          where(
-            'date',
-            '>=',
-            new Date(`${yearMonth}-01`)
-          )
+          where('date', '>=', Timestamp.fromDate(start)),
+          where('date', '<', Timestamp.fromDate(end)),
+          orderBy('date', 'desc')
         )
       )
       return querySnapshot.docs.map((doc) => {
@@ -141,12 +142,12 @@ export const transactionsService = {
   },
 
   async updateTransaction(userId: string, transactionId: string, updates: Partial<Transaction>): Promise<void> {
+    const firestoreUpdates: Record<string, unknown> = { ...updates }
+    if (updates.date) firestoreUpdates.date = Timestamp.fromDate(new Date(updates.date))
+    delete firestoreUpdates.id
     await updateDoc(
       doc(db, USERS_COLLECTION, userId, 'transactions', transactionId),
-      {
-        ...updates,
-        date: updates.date ? Timestamp.fromDate(new Date(updates.date)) : undefined,
-      }
+      firestoreUpdates
     )
   },
 }

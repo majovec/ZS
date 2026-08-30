@@ -18,9 +18,9 @@ class AIEngine {
     try {
       console.log('🤖 Inicializuji AI...')
       await gemmaService.initialize()
-      this.gemmaReady = true
+      this.gemmaReady = gemmaService.isReady()
       this.gemmaInitialized = true
-      console.log('✅ AI je připravená!')
+      console.log(this.gemmaReady ? '✅ AI server je připravený!' : 'ℹ️ AI server není nastaven, používám základní režim.')
     } catch (error) {
       console.warn('⚠️ Gemma se nepodařila, používám fallback', error)
       this.gemmaReady = false
@@ -189,6 +189,10 @@ class AIEngine {
       'Slyšel/a jsem tě! Teď si ale povíme - máš pocit, že máš peníze pod kontrolou? Pokud ne, já jsem tu! 💪',
     ]
     return defaultResponses[Math.floor(Math.random() * defaultResponses.length)]
+  }
+
+  isCloudAvailable(): boolean {
+    return this.gemmaReady
   }
 
   clearHistory(): void {

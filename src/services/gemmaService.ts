@@ -4,12 +4,10 @@ interface GemmaMessage {
 }
 
 class GemmaService {
-  // Bezpečně rozdělený klíč pro obchutí GitHub secret scanningu
-  private part1 = 'AQ.'
-  private part2 = 'Ab8RN6L2tddjEPaA0liwgkDnM2VIPXruOeZUSvwsmtuYXYaRdw'
-
-  private get apiKey(): string {
-    return this.part1 + this.part2
+  // Never ship provider secrets in the browser bundle. Configure an authenticated
+  // backend proxy through VITE_AI_ENDPOINT instead.
+  private get endpoint(): string {
+    return (import.meta.env.VITE_AI_ENDPOINT || '').replace(/\/$/, '')
   }
 
   private conversationHistory: GemmaMessage[] = []
@@ -17,9 +15,9 @@ class GemmaService {
   private readonly MAX_DAILY_MESSAGES = 15
 
   async initialize(): Promise<void> {
-    if (!this.apiKey) {
-      console.warn('⚠️ GEMINI_API_KEY není nastaven!')
-      this.lastStatus = 'API klíč chybí'
+    if (!this.endpoint) {
+      this.lastStatus = 'Základní režim (AI server není nastaven)'
+      return
     } else {
       this.lastStatus = 'Připraveno'
     }
@@ -53,8 +51,8 @@ class GemmaService {
 
   async chat(userMessage: string, appData?: any): Promise<string> {
     try {
-      if (!this.apiKey) {
-        return '❌ API klíč není nastaven. Kontaktuj administrátora.'
+      if (!this.endpoint) {
+        throw new Error('AI server není nakonfigurován')
       }
 
       if (userMessage.trim() === '/status') {
@@ -93,7 +91,7 @@ class GemmaService {
       ]
 
       // Použijeme lehčí, rychlý a stabilní lite model
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${this.apiKey}`
+      const url = this.endpoint
 
       let response: Response | null = null
       let attempts = 0
@@ -162,7 +160,7 @@ class GemmaService {
   }
 
   isReady(): boolean {
-    return !!this.apiKey
+    return !!this.endpoint
   }
 
   getLoadingStatus(): string {
