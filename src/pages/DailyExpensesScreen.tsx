@@ -3,7 +3,6 @@ import { colors, spacing } from '@/theme/colors'
 import { useAppStore } from '@/store/appStore'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
-import { v4 as uuidv4 } from 'uuid'
 import { ZSDailyExpense } from '@/models/types'
 
 export const DailyExpensesScreen: React.FC = () => {
@@ -21,7 +20,7 @@ export const DailyExpensesScreen: React.FC = () => {
     if (!částka || !user) return
 
     const expense: ZSDailyExpense = {
-      id: uuidv4(),
+      id: crypto.randomUUID(),
       userId: user.uid,
       datum: new Date(datum),
       kategorie,
