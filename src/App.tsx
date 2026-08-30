@@ -12,9 +12,12 @@ import { GoalsScreen } from '@/pages/GoalsScreen'
 import { InvestmentsScreen } from '@/pages/InvestmentsScreen'
 import { HistoryScreen } from '@/pages/HistoryScreen'
 import { ChartsScreen } from '@/pages/ChartsScreen'
+import { MonthlyScreen } from '@/pages/MonthlyScreen'
+import { DailyExpensesScreen } from '@/pages/DailyExpensesScreen'
+import { SavingsInvestmentScreen } from '@/pages/SavingsInvestmentScreen'
 import { colors, spacing } from '@/theme/colors'
 
-type Page = 'dashboard' | 'add-transaction' | 'chat' | 'settings' | 'goals' | 'investments' | 'history' | 'charts'
+type Page = 'dashboard' | 'add-transaction' | 'chat' | 'settings' | 'goals' | 'investments' | 'history' | 'charts' | 'monthly' | 'daily' | 'savings'
 
 export const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard')
@@ -189,9 +192,12 @@ export const App: React.FC = () => {
       page === 'goals' ||
       page === 'investments' ||
       page === 'history' ||
-      page === 'charts'
+      page === 'charts' ||
+      page === 'monthly' ||
+      page === 'daily' ||
+      page === 'savings'
     ) {
-      setCurrentPage(page)
+      setCurrentPage(page as Page)
     }
   }
 
@@ -217,6 +223,12 @@ export const App: React.FC = () => {
         return <HistoryScreen />
       case 'charts':
         return <ChartsScreen />
+      case 'monthly':
+        return <MonthlyScreen />
+      case 'daily':
+        return <DailyExpensesScreen />
+      case 'savings':
+        return <SavingsInvestmentScreen />
       case 'dashboard':
       default:
         return <Dashboard onNavigate={handleNavigate} />
@@ -232,7 +244,7 @@ export const App: React.FC = () => {
         flexDirection: 'column',
         minHeight: '100dvh',
         backgroundColor: colors.blackDeep,
-        paddingBottom: showNav ? '80px' : '0', // Rezerva pro fixní menu, aby nebyl obsah překrytý
+        paddingBottom: showNav ? '80px' : '0',
       }}
     >
       <div style={{ flex: 1 }}>
@@ -279,10 +291,10 @@ export const App: React.FC = () => {
           />
 
           <NavButton
-            icon="🎯"
-            label="Cíle"
-            active={currentPage === 'goals'}
-            onClick={() => setCurrentPage('goals')}
+            icon="📅"
+            label="ZS"
+            active={currentPage === 'monthly' || currentPage === 'daily' || currentPage === 'savings'}
+            onClick={() => setCurrentPage('monthly')}
           />
 
           <NavButton
