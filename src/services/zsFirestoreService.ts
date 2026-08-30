@@ -24,12 +24,6 @@ const ZS = 'zs'
 const monthDoc = (userId: string, type: string, month: string) =>
   doc(db, USERS, userId, ZS, type, month)
 
-const toDate = (value: any): Date => {
-  if (value?.toDate) return value.toDate()
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? new Date() : date
-}
-
 const serialize = (value: any): any => {
   if (value instanceof Date) return Timestamp.fromDate(value)
   if (Array.isArray(value)) return value.map(serialize)
@@ -61,11 +55,11 @@ export const zsFirestoreService = {
   async loadMonth(userId: string, month: string) {
     try {
       const [income, fixed, variable, unexpected, savings] = await Promise.all([
-      getMonth<ZSMonthlyIncome>(userId, 'monthlyIncome', month),
-      getMonth<ZSMonthlyFixedExpenses>(userId, 'monthlyFixedExpenses', month),
-      getMonth<ZSMonthlyVariableExpenses>(userId, 'monthlyVariableExpenses', month),
-      getMonth<ZSMonthlyUnexpectedExpenses>(userId, 'monthlyUnexpectedExpenses', month),
-      getMonth<ZSSavings>(userId, 'savings', month),
+        getMonth<ZSMonthlyIncome>(userId, 'monthlyIncome', month),
+        getMonth<ZSMonthlyFixedExpenses>(userId, 'monthlyFixedExpenses', month),
+        getMonth<ZSMonthlyVariableExpenses>(userId, 'monthlyVariableExpenses', month),
+        getMonth<ZSMonthlyUnexpectedExpenses>(userId, 'monthlyUnexpectedExpenses', month),
+        getMonth<ZSSavings>(userId, 'savings', month),
       ])
       return { income, fixed, variable, unexpected, savings }
     } catch (error) {
@@ -89,7 +83,7 @@ export const zsFirestoreService = {
     try {
       const snapshot = await getDocs(collection(db, USERS, userId, ZS, 'dailyExpenses'))
       return snapshot.docs
-      .map((item) => deserializeDates({ id: item.id, ...item.data() }) as ZSDailyExpense)
+        .map((item) => deserializeDates({ id: item.id, ...item.data() }) as ZSDailyExpense)
         .sort((a, b) => b.datum.getTime() - a.datum.getTime())
     } catch (error) {
       console.error('ZS: načtení denních výdajů selhalo:', error)
