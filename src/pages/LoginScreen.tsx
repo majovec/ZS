@@ -18,13 +18,6 @@ export const LoginScreen: React.FC = () => {
   const [loading, setLoading] = useState(false)
 
   const setUser = useAppStore((state) => state.setUser)
-  
-    <div style={{ textAlign: 'center', marginBottom: spacing.lg }}>
-  <img src="/logo-192x192.png" alt="Logo" style={{ width: '80px', height: '80px' }} />
-  <h1 style={{ color: colors.gold }}>Finance pod Kontrolou</h1>
-  <p style={{ color: colors.textSecondary }}>Znovu Silnější 💪</p>
-    </div>
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
