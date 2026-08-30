@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { colors, spacing } from '@/theme/colors'
 import { useAppStore } from '@/store/appStore'
-import { gemmaService } from '@/services/gemmaService'
+import { aiEngine } from '@/services/aiService'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 
@@ -31,8 +31,8 @@ export const ChatScreen: React.FC = () => {
   useEffect(() => {
     const initAI = async () => {
       try {
-        await gemmaService.initialize()
-        setAiStatus('✅ Připraveno!')
+        await aiEngine.initialize()
+        setAiStatus(aiEngine.isCloudAvailable() ? '✅ AI server připraven' : 'ℹ️ Základní režim')
         setMessages((prev) => [
           ...prev,
           {
@@ -42,7 +42,7 @@ export const ChatScreen: React.FC = () => {
         ])
       } catch (error) {
         console.error('AI init error:', error)
-        setAiStatus('⚠️ Fallback mode')
+        setAiStatus('⚠️ Základní režim')
         setMessages((prev) => [
           ...prev,
           {
@@ -86,7 +86,7 @@ export const ChatScreen: React.FC = () => {
         }
       })
 
-      const response = await gemmaService.chat(userMessage, {
+      const response = await aiEngine.chat(userMessage, {
         transactions,
         categories,
         goals,

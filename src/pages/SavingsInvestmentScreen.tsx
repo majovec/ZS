@@ -4,6 +4,7 @@ import { useAppStore } from '@/store/appStore'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { ZSSavings, ZSInvestment } from '@/models/types'
+import { zsFirestoreService } from '@/services/zsFirestoreService'
 
 export const SavingsInvestmentScreen: React.FC = () => {
   const user = useAppStore((state) => state.user)
@@ -20,7 +21,7 @@ export const SavingsInvestmentScreen: React.FC = () => {
   const [investmentAmount, setInvestmentAmount] = useState('')
   const [investmentType, setInvestmentType] = useState<'nákup' | 'prodej'>('nákup')
 
-  const handleSaveSavings = () => {
+  const handleSaveSavings = async () => {
     if (!user) return
 
     const savings: ZSSavings = {
@@ -35,9 +36,10 @@ export const SavingsInvestmentScreen: React.FC = () => {
     }
 
     setZsSavings(savings)
+    try { await zsFirestoreService.saveSavings(user.uid, savings) } catch (error) { console.error('Uložení spoření selhalo:', error) }
   }
 
-  const handleAddInvestment = () => {
+  const handleAddInvestment = async () => {
     if (!investmentName || !investmentAmount || !user) return
 
     const investment: ZSInvestment = {
@@ -60,8 +62,15 @@ export const SavingsInvestmentScreen: React.FC = () => {
     }
 
     addZsInvestment(investment)
+    try { await zsFirestoreService.saveInvestment(user.uid, investment) } catch (error) { console.error('Uložení investice selhalo:', error) }
     setInvestmentName('')
     setInvestmentAmount('')
+  }
+
+  const handleDeleteInvestment = async (id: string) => {
+    if (!user) return
+    deleteZsInvestment(id)
+    try { await zsFirestoreService.deleteInvestment(user.uid, id) } catch (error) { console.error('Smazání investice selhalo:', error) }
   }
 
   const totalInvestments = zsInvestments.reduce((sum, inv) => sum + inv.bank, 0)
@@ -213,7 +222,7 @@ export const SavingsInvestmentScreen: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
                 <span style={{ fontWeight: 'bold' }}>{inv.název}</span>
                 <button
-                  onClick={() => deleteZsInvestment(inv.id)}
+                  onClick={() => void handleDeleteInvestment(inv.id)}
                   style={{
                     background: 'none',
                     border: 'none',

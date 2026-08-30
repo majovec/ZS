@@ -3,6 +3,7 @@ import { colors, spacing } from '@/theme/colors'
 import { useAppStore } from '@/store/appStore'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
+import { zsFirestoreService } from '@/services/zsFirestoreService'
 
 export const MonthlyScreen: React.FC = () => {
   const user = useAppStore((state) => state.user)
@@ -87,6 +88,7 @@ export const MonthlyScreen: React.FC = () => {
       },
     }
     setZsMonthlyIncome(updated)
+    if (user) void zsFirestoreService.saveIncome(user.uid, { ...updated, updatedAt: new Date() } as any).catch(console.error)
   }
 
   const handleFixedChange = (key: string, type: 'plánované' | 'skutečné', value: number) => {
@@ -102,6 +104,7 @@ export const MonthlyScreen: React.FC = () => {
       },
     }
     setZsMonthlyFixedExpenses(updated)
+    if (user) void zsFirestoreService.saveFixed(user.uid, { ...updated, updatedAt: new Date() } as any).catch(console.error)
   }
 
   const handleVariableChange = (key: string, type: 'plánované' | 'skutečné', value: number) => {
@@ -117,6 +120,7 @@ export const MonthlyScreen: React.FC = () => {
       },
     }
     setZsMonthlyVariableExpenses(updated)
+    if (user) void zsFirestoreService.saveVariable(user.uid, { ...updated, updatedAt: new Date() } as any).catch(console.error)
   }
 
   const handleToggleEdit = () => {
