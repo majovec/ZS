@@ -83,6 +83,124 @@ export interface MonthSummary {
   categoryActuals: Record<string, number>
 }
 
+// ===== ZNOVU SILNĚJŠÍ MODUL =====
+
+// Měsíční příjmy
+export interface ZSMonthlyIncome {
+  id: string
+  userId: string
+  month: string // "2025-02" formát
+  items: {
+    výplata: { plánované: number; skutečné: number }
+    brigáda: { plánované: number; skutečné: number }
+    dárek: { plánované: number; skutečné: number }
+    podnikání: { plánované: number; skutečné: number }
+  }
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Měsíční fixní výdaje
+export interface ZSMonthlyFixedExpenses {
+  id: string
+  userId: string
+  month: string
+  items: {
+    nájem: { plánované: number; skutečné: number }
+    energie: { plánované: number; skutečné: number }
+    telefon: { plánované: number; skutečné: number }
+    internet: { plánované: number; skutečné: number }
+    pojistky: { plánované: number; skutečné: number }
+    splátky: { plánované: number; skutečné: number }
+  }
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Měsíční variabilní výdaje
+export interface ZSMonthlyVariableExpenses {
+  id: string
+  userId: string
+  month: string
+  items: {
+    osobka: { plánované: number; skutečné: number }
+    jídlo: { plánované: number; skutečné: number }
+    doprava: { plánované: number; skutečné: number }
+    škola: { plánované: number; skutečné: number }
+    kroužky: { plánované: number; skutečné: number }
+  }
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Měsíční nečekané výdaje
+export interface ZSMonthlyUnexpectedExpenses {
+  id: string
+  userId: string
+  month: string
+  items: Array<{
+    id: string
+    název: string
+    plánované: number
+    skutečné: number
+  }>
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Denní výdaje
+export interface ZSDailyExpense {
+  id: string
+  userId: string
+  datum: Date
+  kategorie: 'jídlo' | 'osobka' | 'doprava' | 'nečekané'
+  částka: number
+  poznámka: string
+  createdAt: Date
+}
+
+// Spoření
+export interface ZSSavings {
+  id: string
+  userId: string
+  month: string
+  plánované: number
+  skutečné: number
+  zůstatek: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Investice
+export interface ZSInvestment {
+  id: string
+  userId: string
+  název: string
+  počátek: number // Počáteční suma
+  investováno: number // Kolik bylo investováno
+  bank: number // Aktuální zůstatek
+  měsíc: string
+  položky: Array<{
+    datum: Date
+    částka: number
+    popis: string
+  }>
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Měsíční přehled (SHRNUTÍ)
+export interface ZSMonthlySummary {
+  měsíc: string
+  příjmyPlánované: number
+  příjmySkutečné: number
+  výdajePlánované: number
+  výdajeSkutečné: number
+  výsledekPlánovaný: number
+  výsledekSkutečný: number
+  skutečněZbylo: number
+}
+
 export const DEFAULT_CATEGORIES: Category[] = [
   // Příjmy
   { id: 'income-salary', name: 'Výplata', type: CategoryType.INCOME, colorHex: '#4CAF50', icon: 'briefcase', isDefault: true },
@@ -100,9 +218,9 @@ export const DEFAULT_CATEGORIES: Category[] = [
 
   // Variabilní výdaje
   { id: 'var-food', name: 'Jídlo', type: CategoryType.VARIABLE, colorHex: '#FFA500', icon: 'utensils', isDefault: true },
-  { id: 'var-personal', name: 'Osobní péče', type: CategoryType.VARIABLE, colorHex: '#FFA500', icon: 'heart', isDefault: true },
+  { id: 'var-personal', name: 'Osobka', type: CategoryType.VARIABLE, colorHex: '#FFA500', icon: 'heart', isDefault: true },
   { id: 'var-transport', name: 'Doprava', type: CategoryType.VARIABLE, colorHex: '#FFA500', icon: 'car', isDefault: true },
-  { id: 'var-education', name: 'Vzdělání', type: CategoryType.VARIABLE, colorHex: '#FFA500', icon: 'book', isDefault: true },
+  { id: 'var-education', name: 'Škola', type: CategoryType.VARIABLE, colorHex: '#FFA500', icon: 'book', isDefault: true },
   { id: 'var-hobby', name: 'Kroužky', type: CategoryType.VARIABLE, colorHex: '#FFA500', icon: 'activity', isDefault: true },
 
   // Nečekané výdaje
