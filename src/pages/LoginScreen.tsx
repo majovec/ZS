@@ -78,17 +78,15 @@ export const LoginScreen: React.FC = () => {
             width: '80px',
             height: '80px',
             margin: '0 auto 32px',
-            backgroundColor: colors.gold,
             borderRadius: '50%',
+            overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '40px',
-            fontWeight: 'bold',
-            color: colors.blackDeep,
+            backgroundColor: colors.gold,
           }}
         >
-          💰
+          <img src="/android_192x192.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
 
         <h1
