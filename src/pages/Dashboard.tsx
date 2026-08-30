@@ -121,7 +121,7 @@ export const Dashboard: React.FC<{
               transition: 'transform 0.2s',
             }}
           >
-            <img src="/android_192x192.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={`${import.meta.env.BASE_URL}android_192x192.png`} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>
