@@ -1,25 +1,23 @@
 <!doctype html>
 <html lang="cs">
   <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Finance pod kontrolou</title>
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="apple-touch-icon" href="/logo-180x180.png">
+    <!-- PWA & Favicon (opravené cesty a názvy souborů) -->
+    <link rel="icon" type="image/png" href="./favicon_32x32.png" />
+    <link rel="apple-touch-icon" href="./ios_180x180.png" />
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="./manifest.json" />
 
     <!-- Social Media Preview -->
-    <meta property="og:image" content="/logo-1200x630.png">
-    <meta property="og:title" content="Finance pod Kontrolou - Znovu Silnější">
-    <meta property="og:description" content="Správa osobních financí s AI poradcem">
+    <meta property="og:image" content="./social_preview_1200x630.png" />
+    <meta property="og:title" content="Finance pod Kontrolou - Znovu Silnější" />
+    <meta property="og:description" content="Správa osobních financí s AI poradcem" />
 
-    <!-- PWA Theme -->
-    <meta name="theme-color" content="#D4AF37">
-
-    
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    
     <!-- PWA Meta Tags -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="Finance pod kontrolou - Správa osobních financí s AI poradcem. Znovu Silnější." />
     <meta name="theme-color" content="#0A0A0A" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -27,18 +25,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Finance" />
     
-    <!-- Apple Icons -->
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    
-    <!-- Web App Manifest -->
-    <link rel="manifest" href="/manifest.json" />
-    
     <!-- Preconnect to Firebase -->
     <link rel="preconnect" href="https://firestore.googleapis.com" />
-    
-    <title>Finance pod kontrolou</title>
   </head>
-  <body>
+  <body style="background-color: #0A0A0A; margin: 0;">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
