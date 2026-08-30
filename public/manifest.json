@@ -1,26 +1,26 @@
 {
-  "name": "Finance pod Kontrolou - Znovu Silnější",
-  "short_name": "Finance",
-  "description": "Správa osobních financí",
-  "start_url": "./",
+  "name": "Znovu Silnější",
+  "short_name": "Znovu Silnější",
+  "description": "Finance pod kontrolou - Správa osobních financí",
+  "start_url": "/ZS/",
   "display": "standalone",
   "background_color": "#0A0A0A",
   "theme_color": "#D4AF37",
   "icons": [
     {
-      "src": "./android_192x192.png",
+      "src": "/ZS/android_192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./pwa_appstore_512x512.png",
+      "src": "/ZS/pwa_appstore_512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./ios_180x180.png",
+      "src": "/ZS/ios_180x180.png",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
