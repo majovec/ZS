@@ -236,13 +236,14 @@ export const Dashboard: React.FC<{
       </div>
 
       {/* Action Buttons */}
-      <Button
-        fullWidth
-        onClick={() => setShowAddTransactionModal(true)}
-        style={{ marginBottom: spacing.md }}
-      >
-        ➕ Nový zápis
-      </Button>
+      <div style={{ position: 'relative', zIndex: 10, marginBottom: spacing.md }}>
+        <Button
+          fullWidth
+          onClick={() => setShowAddTransactionModal(true)}
+        >
+          ➕ Nový zápis
+        </Button>
+      </div>
 
       {/* Motivation Modal */}
       {showMotivation && (
