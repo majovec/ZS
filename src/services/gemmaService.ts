@@ -51,7 +51,7 @@ class GemmaService {
     }
   }
 
-  async chat(userMessage: string): Promise<string> {
+  async chat(userMessage: string, appData?: any): Promise<string> {
     try {
       if (!this.apiKey) {
         return '❌ API klíč není nastaven. Kontaktuj administrátora.'
@@ -72,7 +72,12 @@ class GemmaService {
         parts: [{ text: msg.content }],
       }))
 
-      const promptWithPersona = `Jsi přátelský český finanční poradce pomáhající lidem s dluhy. Odpovídej věcně, stručně a lidsky. Uživatel píše: ${userMessage}`
+      let contextString = ''
+      if (appData) {
+        contextString = `\n\nAktuální data uživatele z aplikace:\n${JSON.stringify(appData, null, 2)}`
+      }
+
+      const promptWithPersona = `Jsi přátelský český finanční poradce pomáhající lidem s dluhy a financemi. Odpovídej věcně, stručně a lidsky. Máš k dispozici data uživatele z aplikace.${contextString}\n\nUživatel píše: ${userMessage}`
 
       contents.push({
         role: 'user',
@@ -80,7 +85,7 @@ class GemmaService {
       })
 
       // Použijeme lehčí, rychlý a stabilní lite model
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${this.apiKey}`
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${this.apiKey}`
 
       let response: Response | null = null
       let attempts = 0
