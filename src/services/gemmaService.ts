@@ -79,29 +79,45 @@ class GemmaService {
         parts: [{ text: promptWithPersona }],
       })
 
-      // Aktualizováno na oficiální endpoint gemini-3.7-flash
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${this.apiKey}`
+      // Použijeme lehčí, rychlý a stabilní lite model
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${this.apiKey}`
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ contents }),
-      })
+      let response: Response | null = null
+      let attempts = 0
+      const maxAttempts = 3
 
-      if (!response.ok) {
-        const errorData = await response.json()
+      while (attempts < maxAttempts) {
+        attempts++
+        response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ contents }),
+        })
+
+        if (response.status === 503 && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 1500))
+          continue
+        }
+        break
+      }
+
+      if (!response || !response.ok) {
+        const errorData = response ? await response.json().catch(() => ({})) : {}
         console.error('Gemini API Error:', errorData)
 
-        if (response.status === 429) {
+        if (response?.status === 429) {
           return '⏸️ Příliš mnoho požadavků. Počkej chvíli a zkus znovu.'
         }
-        if (response.status === 401) {
+        if (response?.status === 503) {
+          return '🔄 Server je momentálně vytížený. Zkus prosím odeslat zprávu za chvíli znovu.'
+        }
+        if (response?.status === 401) {
           return '🔑 Chyba autentizace. API klíč je neplatný.'
         }
 
-        throw new Error(`API Error (${response.status}): ${errorData?.error?.message || 'Neznámá chyba'}`)
+        throw new Error(`API Error (${response?.status || 'Neznámá'}): ${errorData?.error?.message || 'Neznámá chyba'}`)
       }
 
       const data = await response.json()
