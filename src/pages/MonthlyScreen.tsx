@@ -3,10 +3,8 @@ import { colors, spacing } from '@/theme/colors'
 import { useAppStore } from '@/store/appStore'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
-import { zsMonthlyService } from '@/services/firestoreService'
 
 export const MonthlyScreen: React.FC = () => {
-  const user = useAppStore((state) => state.user)
   const zsMonthlyIncome = useAppStore((state) => state.zsMonthlyIncome)
   const setZsMonthlyIncome = useAppStore((state) => state.setZsMonthlyIncome)
   const zsMonthlyFixedExpenses = useAppStore((state) => state.zsMonthlyFixedExpenses)
@@ -17,13 +15,11 @@ export const MonthlyScreen: React.FC = () => {
   const calculateZsMonthlySummary = useAppStore((state) => state.calculateZsMonthlySummary)
 
   const [editMode, setEditMode] = useState(false)
-  const [saving, setSaving] = useState(false)
 
-  // Automatická inicializace výchozích struktur, pokud jsou v datech null (aby se zobrazil formulář a šlo psát)
+  // Automatická inicializace výchozích struktur, pokud jsou v datech null
   useEffect(() => {
     if (!zsMonthlyIncome) {
       setZsMonthlyIncome({
-        měsíc: new Date().toISOString().slice(0, 7),
         items: {
           výplata: { plánované: 0, skutečné: 0 },
           brigáda: { plánované: 0, skutečné: 0 },
@@ -34,7 +30,6 @@ export const MonthlyScreen: React.FC = () => {
     }
     if (!zsMonthlyFixedExpenses) {
       setZsMonthlyFixedExpenses({
-        měsíc: new Date().toISOString().slice(0, 7),
         items: {
           nájem: { plánované: 0, skutečné: 0 },
           energie: { plánované: 0, skutečné: 0 },
@@ -47,7 +42,6 @@ export const MonthlyScreen: React.FC = () => {
     }
     if (!zsMonthlyVariableExpenses) {
       setZsMonthlyVariableExpenses({
-        měsíc: new Date().toISOString().slice(0, 7),
         items: {
           osobka: { plánované: 0, skutečné: 0 },
           jídlo: { plánované: 0, skutečné: 0 },
@@ -57,7 +51,7 @@ export const MonthlyScreen: React.FC = () => {
         },
       })
     }
-  }, [zsMonthlyIncome, zsMonthlyFixedExpenses, zsMonthlyVariableExpenses])
+  }, [zsMonthlyIncome, zsMonthlyFixedExpenses, zsMonthlyVariableExpenses, setZsMonthlyIncome, setZsMonthlyFixedExpenses, setZsMonthlyVariableExpenses])
 
   useEffect(() => {
     calculateZsMonthlySummary()
@@ -108,21 +102,7 @@ export const MonthlyScreen: React.FC = () => {
     setZsMonthlyVariableExpenses(updated)
   }
 
-  const handleToggleEdit = async () => {
-    if (editMode) {
-      if (user) {
-        try {
-          setSaving(true)
-          if (zsMonthlyIncome) await zsMonthlyService.saveIncome(user.uid, zsMonthlyIncome)
-          if (zsMonthlyFixedExpenses) await zsMonthlyService.saveFixedExpenses(user.uid, zsMonthlyFixedExpenses)
-          if (zsMonthlyVariableExpenses) await zsMonthlyService.saveVariableExpenses(user.uid, zsMonthlyVariableExpenses)
-        } catch (error) {
-          console.error('Chyba při ukládání:', error)
-        } finally {
-          setSaving(false)
-        }
-      }
-    }
+  const handleToggleEdit = () => {
     setEditMode(!editMode)
   }
 
@@ -217,8 +197,8 @@ export const MonthlyScreen: React.FC = () => {
 
       {/* FIXNÍ TLAČÍTKO DOLE */}
       <div style={{ position: 'fixed', bottom: '70px', left: spacing.md, right: spacing.md, zIndex: 100 }}>
-        <Button fullWidth onClick={handleToggleEdit} disabled={saving}>
-          {saving ? '⏳ Ukládám...' : editMode ? '✅ Uložit' : '✏️ Upravit'}
+        <Button fullWidth onClick={handleToggleEdit}>
+          {editMode ? '✅ Uložit' : '✏️ Upravit'}
         </Button>
       </div>
     </div>
