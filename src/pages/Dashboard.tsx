@@ -111,17 +111,17 @@ export const Dashboard: React.FC<{
             style={{
               width: '44px',
               height: '44px',
-              backgroundColor: colors.gold,
               borderRadius: '50%',
+              overflow: 'hidden',
+              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'pointer',
-              fontSize: '24px',
+              backgroundColor: colors.gold,
               transition: 'transform 0.2s',
             }}
           >
-            💰
+            <img src="/android_192x192.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>
