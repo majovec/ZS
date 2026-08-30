@@ -67,6 +67,12 @@ class GemmaService {
         return `🛑 Vyčerpal/a jsi svůj dnešní bezplatný limit ${this.MAX_DAILY_MESSAGES} zpráv. Pokračovat můžeš zase zítra! 💪`
       }
 
+      // Do historie ukládáme čistou zprávu uživatele
+      this.conversationHistory.push({
+        role: 'user',
+        content: userMessage,
+      })
+
       const contents = this.conversationHistory.map((msg) => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: msg.content }],
@@ -77,12 +83,14 @@ class GemmaService {
         contextString = `\n\nAktuální data uživatele z aplikace:\n${JSON.stringify(appData, null, 2)}`
       }
 
-      const promptWithPersona = `Jsi přátelský český finanční poradce pomáhající lidem s dluhy a financemi. Odpovídej věcně, stručně a lidsky. Máš k dispozici data uživatele z aplikace.${contextString}\n\nUživatel píše: ${userMessage}`
-
-      contents.push({
-        role: 'user',
-        parts: [{ text: promptWithPersona }],
-      })
+      // Přidáme systémový kontext jako poslední instrukci, aniž bychom tím špinili trvalou historii
+      const fullContents = [
+        ...contents.slice(0, -1),
+        {
+          role: 'user',
+          parts: [{ text: `Jsi přátelský český finanční poradce pomáhající lidem s dluhy a financemi. Odpovídej věcně, stručně a lidsky. Máш k dispozici data uživatele z aplikace.${contextString}\n\nUživatel píše: ${userMessage}` }]
+        }
+      ]
 
       // Použijeme lehčí, rychlý a stabilní lite model
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${this.apiKey}`
@@ -98,7 +106,7 @@ class GemmaService {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ contents }),
+          body: JSON.stringify({ contents: fullContents }),
         })
 
         if (response.status === 503 && attempts < maxAttempts) {
@@ -130,17 +138,13 @@ class GemmaService {
         data?.candidates?.[0]?.content?.parts?.[0]?.text ||
         'Omlouvám se, na tohle nedokážu odpovědět.'
 
+      // Do historie asistenta uložíme čistou odpověď AI (bez počitadla, aby se to řetězením nekazilo)
       this.conversationHistory.push({
-        role: 'user',
-        content: userMessage,
+        role: 'assistant',
+        content: responseText,
       })
 
       const finalResponse = `${responseText}\n\n_(Zbývajících zpráv dnes: ${limitCheck.remaining})_`
-
-      this.conversationHistory.push({
-        role: 'assistant',
-        content: finalResponse,
-      })
 
       return finalResponse
     } catch (error: any) {
