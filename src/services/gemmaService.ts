@@ -4,19 +4,21 @@ interface GemmaMessage {
 }
 
 class GemmaService {
-  private part1 = 'AQ.'
-  private part2 = 'Ab8RN6L2tddjEPaA0liwgkDnM2VIPXruOeZUSvwsmtuYXYaRdw'
-
-  private get apiKey(): string {
-    return this.part1 + this.part2
-  }
-
   private conversationHistory: GemmaMessage[] = []
   private lastStatus = 'Připraveno (Limit: 15 zpráv/den)'
   private readonly MAX_DAILY_MESSAGES = 15
 
+  private get apiKey(): string {
+    return import.meta.env.VITE_GEMINI_API_KEY || ''
+  }
+
   async initialize(): Promise<void> {
-    this.lastStatus = 'Připraveno'
+    if (!this.apiKey) {
+      console.warn('⚠️ GEMINI_API_KEY není nastaven!')
+      this.lastStatus = 'API klíč chybí'
+    } else {
+      this.lastStatus = 'Připraveno'
+    }
   }
 
   private checkAndIncrementLimit(): { allowed: boolean; remaining: number } {
@@ -47,10 +49,13 @@ class GemmaService {
 
   async chat(userMessage: string): Promise<string> {
     try {
+      if (!this.apiKey) {
+        return '❌ API klíč není nastaven. Kontaktuj administrátora.'
+      }
+
       if (userMessage.trim() === '/status') {
-        const hasKey = !!this.part2
         const zbbyva = this.getRemainingMessages()
-        return `📊 Stav AI: ${this.lastStatus} | Zbývá ti dnes zpráv: ${zbbyva}/${this.MAX_DAILY_MESSAGES} | API klíč: ${hasKey ? 'OK ✅' : 'Chybí ❌'}`
+        return `📊 Stav AI: ${this.lastStatus} | Zbývá ti dnes zpráv: ${zbbyva}/${this.MAX_DAILY_MESSAGES}`
       }
 
       const limitCheck = this.checkAndIncrementLimit()
@@ -58,42 +63,53 @@ class GemmaService {
         return `🛑 Vyčerpal/a jsi svůj dnešní bezplatný limit ${this.MAX_DAILY_MESSAGES} zpráv. Pokračovat můžeš zase zítra! 💪`
       }
 
-      const contents = this.conversationHistory.map(msg => ({
+      const contents = this.conversationHistory.map((msg) => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }]
+        parts: [{ text: msg.content }],
       }))
 
       const promptWithPersona = `Jsi přátelský český finanční poradce pomáhající lidem s dluhy. Odpovídej věcně, stručně a lidsky. Uživatel píše: ${userMessage}`
-      
+
       contents.push({
         role: 'user',
-        parts: [{ text: promptWithPersona }]
+        parts: [{ text: promptWithPersona }],
       })
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`
+      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${this.apiKey}`
 
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ contents })
+        body: JSON.stringify({ contents }),
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`Chyba serveru (${response.status}): ${errorText}`)
+        const errorData = await response.json()
+        console.error('Gemini API Error:', errorData)
+
+        if (response.status === 429) {
+          return '⏸️ Příliš mnoho požadavků. Počkej chvíli a zkus znovu.'
+        }
+        if (response.status === 401) {
+          return '🔑 Chyba autentizace. API klíč je neplatný.'
+        }
+
+        throw new Error(`API Error (${response.status}): ${errorData?.error?.message || 'Neznámá chyba'}`)
       }
 
       const data = await response.json()
-      const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Omlouvám se, na tohle nedokážám odpovědět.'
+      const responseText =
+        data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+        'Omlouvám se, na tohle nedokážu odpovědět.'
 
       this.conversationHistory.push({
         role: 'user',
         content: userMessage,
       })
 
-      const finalResponse = `${responseText}\n\n_(Dnešní zbývající limit: ${limitCheck.remaining} zpráv)_`
+      const finalResponse = `${responseText}\n\n_(Zbývajících zpráv dnes: ${limitCheck.remaining})_`
 
       this.conversationHistory.push({
         role: 'assistant',
@@ -102,7 +118,7 @@ class GemmaService {
 
       return finalResponse
     } catch (error: any) {
-      console.error('Gemini REST Error:', error)
+      console.error('Gemini Error:', error)
       return `⚠️ Chyba: ${error?.message || 'Spojení selhalo.'}`
     }
   }
@@ -116,7 +132,7 @@ class GemmaService {
   }
 
   isReady(): boolean {
-    return true
+    return !!this.apiKey
   }
 
   getLoadingStatus(): string {
