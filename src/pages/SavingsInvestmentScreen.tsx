@@ -3,7 +3,6 @@ import { colors, spacing } from '@/theme/colors'
 import { useAppStore } from '@/store/appStore'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
-import { v4 as uuidv4 } from 'uuid'
 import { ZSSavings, ZSInvestment } from '@/models/types'
 
 export const SavingsInvestmentScreen: React.FC = () => {
@@ -25,7 +24,7 @@ export const SavingsInvestmentScreen: React.FC = () => {
     if (!user) return
 
     const savings: ZSSavings = {
-      id: zsSavings?.id || uuidv4(),
+      id: zsSavings?.id || crypto.randomUUID(),
       userId: user.uid,
       month: zsCurrentMonth,
       plánované: savingsPlanned,
@@ -42,7 +41,7 @@ export const SavingsInvestmentScreen: React.FC = () => {
     if (!investmentName || !investmentAmount || !user) return
 
     const investment: ZSInvestment = {
-      id: uuidv4(),
+      id: crypto.randomUUID(),
       userId: user.uid,
       název: investmentName,
       počátek: Number(investmentAmount),
