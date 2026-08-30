@@ -17,6 +17,12 @@ export const Dashboard: React.FC<{
     (state) => state.setShowAddTransactionModal
   )
 
+  <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg }}>
+  <img src="/logo-192x192.png" alt="Logo" style={{ width: '50px', height: '50px' }} />
+  <h1 style={{ margin: 0, color: colors.gold }}>Finance pod Kontrolou</h1>
+  </div>
+
+
   const [monthlyIncome, setMonthlyIncome] = useState(0)
   const [monthlyExpense, setMonthlyExpense] = useState(0)
   const [showMotivation, setShowMotivation] = useState(false)
