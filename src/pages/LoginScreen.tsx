@@ -86,7 +86,7 @@ export const LoginScreen: React.FC = () => {
             backgroundColor: colors.gold,
           }}
         >
-          <img src="/android_192x192.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={`${import.meta.env.BASE_URL}android_192x192.png`} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
 
         <h1
