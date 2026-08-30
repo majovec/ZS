@@ -47,6 +47,7 @@ export const MonthlyScreen: React.FC = () => {
         backgroundColor: colors.blackDeep,
         minHeight: '100vh',
         padding: spacing.md,
+        paddingBottom: '100px', // Místo pro spodní fixní tlačítko
         color: colors.textPrimary,
       }}
     >
@@ -238,10 +239,20 @@ export const MonthlyScreen: React.FC = () => {
         </div>
       </Card>
 
-      {/* ACTION BUTTONS */}
-      <Button fullWidth onClick={() => setEditMode(!editMode)} style={{ marginBottom: spacing.md }}>
-        {editMode ? '✅ Uložit' : '✏️ Upravit'}
-      </Button>
+      {/* FIXNÍ PLOVOUCÍ TLAČÍTKO DOLE */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '70px', // Nad spodní navigační lištou
+          left: spacing.md,
+          right: spacing.md,
+          zIndex: 100,
+        }}
+      >
+        <Button fullWidth onClick={() => setEditMode(!editMode)}>
+          {editMode ? '✅ Uložit' : '✏️ Upravit'}
+        </Button>
+      </div>
     </div>
   )
 }
