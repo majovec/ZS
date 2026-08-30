@@ -13,9 +13,6 @@ export const Dashboard: React.FC<{
   const setCategories = useAppStore((state) => state.setCategories)
   const logoTapCount = useAppStore((state) => state.logoTapCount)
   const setLogoTapCount = useAppStore((state) => state.setLogoTapCount)
-  const setShowAddTransactionModal = useAppStore(
-    (state) => state.setShowAddTransactionModal
-  )
 
   const [monthlyIncome, setMonthlyIncome] = useState(0)
   const [monthlyExpense, setMonthlyExpense] = useState(0)
@@ -239,7 +236,7 @@ export const Dashboard: React.FC<{
       <div style={{ position: 'relative', zIndex: 10, marginBottom: spacing.md }}>
         <Button
           fullWidth
-          onClick={() => setShowAddTransactionModal(true)}
+          onClick={() => onNavigate('add-transaction')}
         >
           ➕ Nový zápis
         </Button>
