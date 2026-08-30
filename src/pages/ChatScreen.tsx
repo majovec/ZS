@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { colors, spacing } from '@/theme/colors'
 import { useAppStore } from '@/store/appStore'
-import { aiEngine } from '@/services/aiService'
+import { gemmaService } from '@/services/gemmaService'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 
@@ -20,7 +20,7 @@ export const ChatScreen: React.FC = () => {
     {
       role: 'assistant',
       content:
-        'Ahoj! Jsem tvůj AI finanční poradce. Iniciuji AI model (první spuštění může trvat 2-3 minuty). Zeptej se mě na cokoli o tvých financích!',
+        'Ahoj! Jsem tvůj AI finanční poradce. Zeptej se mě na cokoliv o tvých financích!',
     },
   ])
   const [inputValue, setInputValue] = useState('')
@@ -31,7 +31,7 @@ export const ChatScreen: React.FC = () => {
   useEffect(() => {
     const initAI = async () => {
       try {
-        await aiEngine.initialize()
+        await gemmaService.initialize()
         setAiStatus('✅ Připraveno!')
         setMessages((prev) => [
           ...prev,
@@ -70,7 +70,6 @@ export const ChatScreen: React.FC = () => {
     setLoading(true)
 
     try {
-      // Vypočítej měsíční sumy
       let monthlyIncome = 0
       let monthlyExpense = 0
       const now = new Date()
@@ -87,7 +86,7 @@ export const ChatScreen: React.FC = () => {
         }
       })
 
-      const response = await aiEngine.chat(userMessage, {
+      const response = await gemmaService.chat(userMessage, {
         transactions,
         categories,
         goals,
