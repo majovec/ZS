@@ -79,8 +79,8 @@ class GemmaService {
         parts: [{ text: promptWithPersona }],
       })
 
-      // Používáme v1beta a gemini-1.5-flash, což je pro tento klíč správný endpoint
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`
+      // Aktualizováno na oficiální endpoint gemini-3.7-flash
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${this.apiKey}`
 
       const response = await fetch(url, {
         method: 'POST',
