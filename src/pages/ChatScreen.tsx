@@ -20,7 +20,7 @@ export const ChatScreen: React.FC = () => {
     {
       role: 'assistant',
       content:
-        'Ahoj! Jsem tvůj AI finanční poradce. Zeptej se mě na cokoliv o tvých financích!',
+        'Ahoj! Jsem Arnošt, tvůj AI finanční poradce. Zeptej se mě na cokoliv o tvých financích!',
     },
   ])
   const [inputValue, setInputValue] = useState('')
@@ -166,7 +166,7 @@ export const ChatScreen: React.FC = () => {
               justifyContent: 'flex-start',
             }}
           >
-            <Card>🤔 Gemma přemýšlí...</Card>
+            <Card>🤔 Arnošt přemýšlí...</Card>
           </div>
         )}
         <div ref={messagesEndRef} />
