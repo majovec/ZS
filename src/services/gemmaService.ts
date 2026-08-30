@@ -75,7 +75,7 @@ class GemmaService {
         parts: [{ text: promptWithPersona }],
       })
 
-      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${this.apiKey}`
+      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`
 
       const response = await fetch(url, {
         method: 'POST',
