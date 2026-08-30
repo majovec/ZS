@@ -8,6 +8,17 @@ import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { TransactionType, TransactionSource } from '@/models/types'
 
+const DEFAULT_CATEGORIES = [
+  { name: 'Potraviny', type: 'expense', icon: '🛒', color: '#e74c3c' },
+  { name: 'Bydlení', type: 'expense', icon: '🏠', color: '#3498db' },
+  { name: 'Doprava', type: 'expense', icon: '🚗', color: '#f39c12' },
+  { name: 'Zábava', type: 'expense', icon: '🎉', color: '#9b59b6' },
+  { name: 'Zdraví', type: 'expense', icon: '💊', color: '#2ecc71' },
+  { name: 'Ostatní výdaje', type: 'expense', icon: '📦', color: '#95a5a6' },
+  { name: 'Mzda / Plat', type: 'income', icon: '💰', color: '#27ae60' },
+  { name: 'Ostatní příjmy', type: 'income', icon: '📈', color: '#2980b9' },
+]
+
 export const AddTransaction: React.FC<{
   onComplete: () => void
 }> = ({ onComplete }) => {
@@ -25,17 +36,26 @@ export const AddTransaction: React.FC<{
   const [showOcrResult, setShowOcrResult] = useState(false)
 
   useEffect(() => {
-    const loadCategories = async () => {
+    const loadOrCreateCategories = async () => {
       if (user) {
         try {
-          const fetchedCategories = await categoriesService.getCategories(user.uid)
-          setCategories(fetchedCategories)
+          let fetched = await categoriesService.getCategories(user.uid)
+          
+          if (fetched.length === 0) {
+            // Pokud uživatel nemá žádné kategorie, vytvoříme výchozí
+            for (const cat of DEFAULT_CATEGORIES) {
+              await categoriesService.addCategory(user.uid, cat)
+            }
+            fetched = await categoriesService.getCategories(user.uid)
+          }
+
+          setCategories(fetched)
         } catch (err) {
           console.error('Chyba při načítání kategorií:', err)
         }
       }
     }
-    loadCategories()
+    loadOrCreateCategories()
   }, [user, setCategories])
 
   const handleSubmit = async (e: React.FormEvent) => {
