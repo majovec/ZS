@@ -5,6 +5,7 @@ import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 
 export const MonthlyScreen: React.FC = () => {
+  const user = useAppStore((state) => state.user)
   const zsMonthlyIncome = useAppStore((state) => state.zsMonthlyIncome)
   const setZsMonthlyIncome = useAppStore((state) => state.setZsMonthlyIncome)
   const zsMonthlyFixedExpenses = useAppStore((state) => state.zsMonthlyFixedExpenses)
@@ -18,18 +19,29 @@ export const MonthlyScreen: React.FC = () => {
 
   // Automatická inicializace výchozích struktur, pokud jsou v datech null
   useEffect(() => {
+    const currentMonth = new Date().toISOString().slice(0, 7)
     if (!zsMonthlyIncome) {
       setZsMonthlyIncome({
+        id: '',
+        userId: user?.uid || '',
+        month: currentMonth,
+        createdAt: new Date(),
+        updatedAt: new Date(),
         items: {
           výplata: { plánované: 0, skutečné: 0 },
           brigáda: { plánované: 0, skutečné: 0 },
           dárek: { plánované: 0, skutečné: 0 },
           podnikání: { plánované: 0, skutečné: 0 },
         },
-      })
+      } as any)
     }
     if (!zsMonthlyFixedExpenses) {
       setZsMonthlyFixedExpenses({
+        id: '',
+        userId: user?.uid || '',
+        month: currentMonth,
+        createdAt: new Date(),
+        updatedAt: new Date(),
         items: {
           nájem: { plánované: 0, skutečné: 0 },
           energie: { plánované: 0, skutečné: 0 },
@@ -38,10 +50,15 @@ export const MonthlyScreen: React.FC = () => {
           pojistky: { plánované: 0, skutečné: 0 },
           splátky: { plánované: 0, skutečné: 0 },
         },
-      })
+      } as any)
     }
     if (!zsMonthlyVariableExpenses) {
       setZsMonthlyVariableExpenses({
+        id: '',
+        userId: user?.uid || '',
+        month: currentMonth,
+        createdAt: new Date(),
+        updatedAt: new Date(),
         items: {
           osobka: { plánované: 0, skutečné: 0 },
           jídlo: { plánované: 0, skutečné: 0 },
@@ -49,9 +66,9 @@ export const MonthlyScreen: React.FC = () => {
           škola: { plánované: 0, skutečné: 0 },
           kroužky: { plánované: 0, skutečné: 0 },
         },
-      })
+      } as any)
     }
-  }, [zsMonthlyIncome, zsMonthlyFixedExpenses, zsMonthlyVariableExpenses, setZsMonthlyIncome, setZsMonthlyFixedExpenses, setZsMonthlyVariableExpenses])
+  }, [zsMonthlyIncome, zsMonthlyFixedExpenses, zsMonthlyVariableExpenses, setZsMonthlyIncome, setZsMonthlyFixedExpenses, setZsMonthlyVariableExpenses, user])
 
   useEffect(() => {
     calculateZsMonthlySummary()
