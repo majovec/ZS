@@ -32,13 +32,12 @@ export const categoriesService = {
         collection(db, USERS_COLLECTION, userId, 'categories')
       )
       if (querySnapshot.empty) {
-        // Pokud neexistují, vytvoř default
         await categoriesService.initializeCategories(userId)
         return DEFAULT_CATEGORIES
       }
-      return querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
+      return querySnapshot.docs.map((document) => ({
+        id: document.id,
+        ...document.data(),
       })) as Category[]
     } catch (error) {
       console.error('Error fetching categories:', error)
@@ -80,13 +79,13 @@ export const transactionsService = {
           orderBy('date', 'desc')
         )
       )
-      return querySnapshot.docs.map((doc) => {
-        const data = doc.data()
+      return querySnapshot.docs.map((document) => {
+        const data = document.data()
         return {
-          id: doc.id,
+          id: document.id,
           ...data,
-          date: data.date?.toDate?.() || new Date(data.date),
-          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          date: typeof data.date?.toDate === 'function' ? data.date.toDate() : new Date(data.date),
+          createdAt: typeof data.createdAt?.toDate === 'function' ? data.createdAt.toDate() : new Date(data.createdAt),
         } as Transaction
       })
     } catch (error) {
@@ -108,13 +107,13 @@ export const transactionsService = {
           orderBy('date', 'desc')
         )
       )
-      return querySnapshot.docs.map((doc) => {
-        const data = doc.data()
+      return querySnapshot.docs.map((document) => {
+        const data = document.data()
         return {
-          id: doc.id,
+          id: document.id,
           ...data,
-          date: data.date?.toDate?.() || new Date(data.date),
-          createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+          date: typeof data.date?.toDate === 'function' ? data.date.toDate() : new Date(data.date),
+          createdAt: typeof data.createdAt?.toDate === 'function' ? data.createdAt.toDate() : new Date(data.createdAt),
         } as Transaction
       })
     } catch (error) {
@@ -159,12 +158,12 @@ export const goalsService = {
       const querySnapshot = await getDocs(
         collection(db, USERS_COLLECTION, userId, 'goals')
       )
-      return querySnapshot.docs.map((doc) => {
-        const data = doc.data()
+      return querySnapshot.docs.map((document) => {
+        const data = document.data()
         return {
-          id: doc.id,
+          id: document.id,
           ...data,
-          deadline: data.deadline?.toDate?.() || data.deadline,
+          deadline: typeof data.deadline?.toDate === 'function' ? data.deadline.toDate() : data.deadline,
         } as Goal
       })
     } catch (error) {
@@ -206,12 +205,12 @@ export const investmentsService = {
       const querySnapshot = await getDocs(
         collection(db, USERS_COLLECTION, userId, 'investments')
       )
-      return querySnapshot.docs.map((doc) => {
-        const data = doc.data()
+      return querySnapshot.docs.map((document) => {
+        const data = document.data()
         return {
-          id: doc.id,
+          id: document.id,
           ...data,
-          date: data.date?.toDate?.() || new Date(data.date),
+          date: typeof data.date?.toDate === 'function' ? data.date.toDate() : new Date(data.date),
         } as Investment
       })
     } catch (error) {
@@ -248,9 +247,9 @@ export const budgetService = {
           where('yearMonth', '==', yearMonth)
         )
       )
-      return querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
+      return querySnapshot.docs.map((document) => ({
+        id: document.id,
+        ...document.data(),
       })) as MonthlyBudget[]
     } catch (error) {
       console.error('Error fetching budget:', error)
