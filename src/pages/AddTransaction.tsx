@@ -1,7 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { colors, spacing } from '@/theme/colors'
 import { useAppStore } from '@/store/appStore'
-import { transactionsService } from '@/services/firestoreService'
+import { categoriesService, transactionsService } from '@/services/firestoreService'
 import { ocrService } from '@/services/ocrService'
 import { Input } from '@/components/Input'
 import { Button } from '@/components/Button'
@@ -13,6 +13,8 @@ export const AddTransaction: React.FC<{
 }> = ({ onComplete }) => {
   const user = useAppStore((state) => state.user)
   const categories = useAppStore((state) => state.categories)
+  const setCategories = useAppStore((state) => state.setCategories)
+  
   const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE)
   const [categoryId, setCategoryId] = useState('')
   const [amount, setAmount] = useState('')
@@ -21,6 +23,20 @@ export const AddTransaction: React.FC<{
   const [error, setError] = useState('')
   const [ocrResult, setOcrResult] = useState<any>(null)
   const [showOcrResult, setShowOcrResult] = useState(false)
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      if (user) {
+        try {
+          const fetchedCategories = await categoriesService.getCategories(user.uid)
+          setCategories(fetchedCategories)
+        } catch (err) {
+          console.error('Chyba při načítání kategorií:', err)
+        }
+      }
+    }
+    loadCategories()
+  }, [user, setCategories])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
