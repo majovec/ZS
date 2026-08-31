@@ -4,7 +4,11 @@ import { useAppStore } from '@/store/appStore'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { ZSDailyExpense } from '@/models/types'
-import { zsFirestoreService } from '@/services/zsFirestoreService'
+
+// Generuj ID bez extern závislostí
+const generateId = () => {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+}
 
 export const DailyExpensesScreen: React.FC = () => {
   const user = useAppStore((state) => state.user)
@@ -17,11 +21,11 @@ export const DailyExpensesScreen: React.FC = () => {
   const [částka, setCástka] = useState('')
   const [poznámka, setPoznámka] = useState('')
 
-  const handleAddExpense = async () => {
+  const handleAddExpense = () => {
     if (!částka || !user) return
 
     const expense: ZSDailyExpense = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       userId: user.uid,
       datum: new Date(datum),
       kategorie,
@@ -31,15 +35,8 @@ export const DailyExpensesScreen: React.FC = () => {
     }
 
     addZsDailyExpense(expense)
-    try { await zsFirestoreService.saveDailyExpense(user.uid, expense) } catch (error) { console.error('Uložení denního výdaje selhalo:', error) }
     setCástka('')
     setPoznámka('')
-  }
-
-  const handleDeleteExpense = async (id: string) => {
-    if (!user) return
-    deleteZsDailyExpense(id)
-    try { await zsFirestoreService.deleteDailyExpense(user.uid, id) } catch (error) { console.error('Smazání denního výdaje selhalo:', error) }
   }
 
   const expensesByCategory = {
@@ -183,10 +180,10 @@ export const DailyExpensesScreen: React.FC = () => {
       </div>
 
       {/* Výdaje podle kategorií */}
-      <ExpenseCategory title="🍜 Jídlo" expenses={expensesByCategory.jídlo} onDelete={handleDeleteExpense} />
-      <ExpenseCategory title="👤 Osobka" expenses={expensesByCategory.osobka} onDelete={handleDeleteExpense} />
-      <ExpenseCategory title="🚗 Doprava" expenses={expensesByCategory.doprava} onDelete={handleDeleteExpense} />
-      <ExpenseCategory title="⚠️ Nečekané" expenses={expensesByCategory.nečekané} onDelete={handleDeleteExpense} />
+      <ExpenseCategory title="🍜 Jídlo" expenses={expensesByCategory.jídlo} onDelete={deleteZsDailyExpense} />
+      <ExpenseCategory title="👤 Osobka" expenses={expensesByCategory.osobka} onDelete={deleteZsDailyExpense} />
+      <ExpenseCategory title="🚗 Doprava" expenses={expensesByCategory.doprava} onDelete={deleteZsDailyExpense} />
+      <ExpenseCategory title="⚠️ Nečekané" expenses={expensesByCategory.nečekané} onDelete={deleteZsDailyExpense} />
     </div>
   )
 }
