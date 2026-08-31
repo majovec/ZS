@@ -3,10 +3,11 @@ import { colors, spacing } from '@/theme/colors'
 import { useAppStore } from '@/store/appStore'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
-import { zsFirestoreService } from '@/services/zsFirestoreService'
+import { Modal } from '@/components/Modal'
 
 export const MonthlyScreen: React.FC = () => {
   const user = useAppStore((state) => state.user)
+  const categories = useAppStore((state) => state.categories)
   const zsMonthlyIncome = useAppStore((state) => state.zsMonthlyIncome)
   const setZsMonthlyIncome = useAppStore((state) => state.setZsMonthlyIncome)
   const zsMonthlyFixedExpenses = useAppStore((state) => state.zsMonthlyFixedExpenses)
@@ -17,59 +18,12 @@ export const MonthlyScreen: React.FC = () => {
   const calculateZsMonthlySummary = useAppStore((state) => state.calculateZsMonthlySummary)
 
   const [editMode, setEditMode] = useState(false)
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
 
-  // Automatická inicializace výchozích struktur, pokud jsou v datech null
-  useEffect(() => {
-    const currentMonth = new Date().toISOString().slice(0, 7)
-    if (!zsMonthlyIncome) {
-      setZsMonthlyIncome({
-        id: '',
-        userId: user?.uid || '',
-        month: currentMonth,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        items: {
-          výplata: { plánované: 0, skutečné: 0 },
-          brigáda: { plánované: 0, skutečné: 0 },
-          dárek: { plánované: 0, skutečné: 0 },
-          podnikání: { plánované: 0, skutečné: 0 },
-        },
-      } as any)
-    }
-    if (!zsMonthlyFixedExpenses) {
-      setZsMonthlyFixedExpenses({
-        id: '',
-        userId: user?.uid || '',
-        month: currentMonth,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        items: {
-          nájem: { plánované: 0, skutečné: 0 },
-          energie: { plánované: 0, skutečné: 0 },
-          telefon: { plánované: 0, skutečné: 0 },
-          internet: { plánované: 0, skutečné: 0 },
-          pojistky: { plánované: 0, skutečné: 0 },
-          splátky: { plánované: 0, skutečné: 0 },
-        },
-      } as any)
-    }
-    if (!zsMonthlyVariableExpenses) {
-      setZsMonthlyVariableExpenses({
-        id: '',
-        userId: user?.uid || '',
-        month: currentMonth,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        items: {
-          osobka: { plánované: 0, skutečné: 0 },
-          jídlo: { plánované: 0, skutečné: 0 },
-          doprava: { plánované: 0, skutečné: 0 },
-          škola: { plánované: 0, skutečné: 0 },
-          kroužky: { plánované: 0, skutečné: 0 },
-        },
-      } as any)
-    }
-  }, [zsMonthlyIncome, zsMonthlyFixedExpenses, zsMonthlyVariableExpenses, setZsMonthlyIncome, setZsMonthlyFixedExpenses, setZsMonthlyVariableExpenses, user])
+  const incomeCategories = categories.filter((c) => c.type === 'INCOME')
+  const fixedCategories = categories.filter((c) => c.type === 'FIXED')
+  const variableCategories = categories.filter((c) => c.type === 'VARIABLE')
 
   useEffect(() => {
     calculateZsMonthlySummary()
@@ -77,54 +31,30 @@ export const MonthlyScreen: React.FC = () => {
 
   const handleIncomeChange = (key: string, type: 'plánované' | 'skutečné', value: number) => {
     if (!zsMonthlyIncome) return
-    const updated = {
-      ...zsMonthlyIncome,
-      items: {
-        ...zsMonthlyIncome.items,
-        [key]: {
-          ...(zsMonthlyIncome.items as any)[key],
-          [type]: value,
-        },
-      },
-    }
+    const updated = { ...zsMonthlyIncome }
+    ;(updated.items as any)[key][type] = value
     setZsMonthlyIncome(updated)
-    if (user) void zsFirestoreService.saveIncome(user.uid, { ...updated, updatedAt: new Date() } as any).catch(console.error)
   }
 
   const handleFixedChange = (key: string, type: 'plánované' | 'skutečné', value: number) => {
     if (!zsMonthlyFixedExpenses) return
-    const updated = {
-      ...zsMonthlyFixedExpenses,
-      items: {
-        ...zsMonthlyFixedExpenses.items,
-        [key]: {
-          ...(zsMonthlyFixedExpenses.items as any)[key],
-          [type]: value,
-        },
-      },
-    }
+    const updated = { ...zsMonthlyFixedExpenses }
+    ;(updated.items as any)[key][type] = value
     setZsMonthlyFixedExpenses(updated)
-    if (user) void zsFirestoreService.saveFixed(user.uid, { ...updated, updatedAt: new Date() } as any).catch(console.error)
   }
 
   const handleVariableChange = (key: string, type: 'plánované' | 'skutečné', value: number) => {
     if (!zsMonthlyVariableExpenses) return
-    const updated = {
-      ...zsMonthlyVariableExpenses,
-      items: {
-        ...zsMonthlyVariableExpenses.items,
-        [key]: {
-          ...(zsMonthlyVariableExpenses.items as any)[key],
-          [type]: value,
-        },
-      },
-    }
+    const updated = { ...zsMonthlyVariableExpenses }
+    ;(updated.items as any)[key][type] = value
     setZsMonthlyVariableExpenses(updated)
-    if (user) void zsFirestoreService.saveVariable(user.uid, { ...updated, updatedAt: new Date() } as any).catch(console.error)
   }
 
-  const handleToggleEdit = () => {
-    setEditMode(!editMode)
+  const handleAddCategory = () => {
+    if (!newCategoryName) return
+    // TODO: Implementuj přidání kategorie do Firebase
+    setShowCategoryModal(false)
+    setNewCategoryName('')
   }
 
   return (
@@ -133,7 +63,6 @@ export const MonthlyScreen: React.FC = () => {
         backgroundColor: colors.blackDeep,
         minHeight: '100vh',
         padding: spacing.md,
-        paddingBottom: '100px',
         color: colors.textPrimary,
       }}
     >
@@ -144,13 +73,80 @@ export const MonthlyScreen: React.FC = () => {
 
       {/* PŘÍJMY */}
       <Card style={{ marginBottom: spacing.lg }}>
-        <h2 style={{ color: colors.gold, marginBottom: spacing.md, fontSize: '16px' }}>💰 PŘÍJMY</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+          <h2 style={{ color: colors.gold, margin: 0, fontSize: '16px' }}>💰 PŘÍJMY</h2>
+          <button
+            onClick={() => setShowCategoryModal(true)}
+            style={{
+              padding: `${spacing.xs} ${spacing.sm}`,
+              backgroundColor: colors.gold,
+              color: colors.blackDeep,
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '12px',
+            }}
+          >
+            ➕ Kategorie
+          </button>
+        </div>
+
         {zsMonthlyIncome && (
           <>
-            <IncomeRow label="Výplata" planned={zsMonthlyIncome.items.výplata.plánované || 0} actual={zsMonthlyIncome.items.výplata.skutečné || 0} editable={editMode} onPlannedChange={(v) => handleIncomeChange('výplata', 'plánované', v)} onActualChange={(v) => handleIncomeChange('výplata', 'skutečné', v)} />
-            <IncomeRow label="Brigáda" planned={zsMonthlyIncome.items.brigáda.plánované || 0} actual={zsMonthlyIncome.items.brigáda.skutečné || 0} editable={editMode} onPlannedChange={(v) => handleIncomeChange('brigáda', 'plánované', v)} onActualChange={(v) => handleIncomeChange('brigáda', 'skutečné', v)} />
-            <IncomeRow label="Dárek" planned={zsMonthlyIncome.items.dárek.plánované || 0} actual={zsMonthlyIncome.items.dárek.skutečné || 0} editable={editMode} onPlannedChange={(v) => handleIncomeChange('dárek', 'plánované', v)} onActualChange={(v) => handleIncomeChange('dárek', 'skutečné', v)} />
-            <IncomeRow label="Podnikání" planned={zsMonthlyIncome.items.podnikání.plánované || 0} actual={zsMonthlyIncome.items.podnikání.skutečné || 0} editable={editMode} onPlannedChange={(v) => handleIncomeChange('podnikání', 'plánované', v)} onActualChange={(v) => handleIncomeChange('podnikání', 'skutečné', v)} />
+            {incomeCategories.map((cat) => (
+              <IncomeRow
+                key={cat.id}
+                label={cat.name}
+                planned={
+                  (zsMonthlyIncome.items as any)[cat.name.toLowerCase()]?.plánované || 0
+                }
+                actual={
+                  (zsMonthlyIncome.items as any)[cat.name.toLowerCase()]?.skutečné || 0
+                }
+                editable={editMode}
+                onPlannedChange={(v) =>
+                  handleIncomeChange(cat.name.toLowerCase(), 'plánované', v)
+                }
+                onActualChange={(v) =>
+                  handleIncomeChange(cat.name.toLowerCase(), 'skutečné', v)
+                }
+              />
+            ))}
+
+            {/* Standard položky */}
+            <IncomeRow
+              label="Výplata"
+              planned={zsMonthlyIncome.items.výplata.plánované || 0}
+              actual={zsMonthlyIncome.items.výplata.skutečné || 0}
+              editable={editMode}
+              onPlannedChange={(v) => handleIncomeChange('výplata', 'plánované', v)}
+              onActualChange={(v) => handleIncomeChange('výplata', 'skutečné', v)}
+            />
+            <IncomeRow
+              label="Brigáda"
+              planned={zsMonthlyIncome.items.brigáda.plánované || 0}
+              actual={zsMonthlyIncome.items.brigáda.skutečné || 0}
+              editable={editMode}
+              onPlannedChange={(v) => handleIncomeChange('brigáda', 'plánované', v)}
+              onActualChange={(v) => handleIncomeChange('brigáda', 'skutečné', v)}
+            />
+            <IncomeRow
+              label="Dárek"
+              planned={zsMonthlyIncome.items.dárek.plánované || 0}
+              actual={zsMonthlyIncome.items.dárek.skutečné || 0}
+              editable={editMode}
+              onPlannedChange={(v) => handleIncomeChange('dárek', 'plánované', v)}
+              onActualChange={(v) => handleIncomeChange('dárek', 'skutečné', v)}
+            />
+            <IncomeRow
+              label="Podnikání"
+              planned={zsMonthlyIncome.items.podnikání.plánované || 0}
+              actual={zsMonthlyIncome.items.podnikání.skutečné || 0}
+              editable={editMode}
+              onPlannedChange={(v) => handleIncomeChange('podnikání', 'plánované', v)}
+              onActualChange={(v) => handleIncomeChange('podnikání', 'skutečné', v)}
+            />
 
             <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: spacing.md, marginTop: spacing.md }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
@@ -165,14 +161,57 @@ export const MonthlyScreen: React.FC = () => {
       {/* FIXNÍ VÝDAJE */}
       <Card style={{ marginBottom: spacing.lg }}>
         <h2 style={{ color: colors.gold, marginBottom: spacing.md, fontSize: '16px' }}>🔴 FIXNÍ VÝDAJE</h2>
+
         {zsMonthlyFixedExpenses && (
           <>
-            <ExpenseRow label="Nájem" planned={zsMonthlyFixedExpenses.items.nájem.plánované || 0} actual={zsMonthlyFixedExpenses.items.nájem.skutečné || 0} editable={editMode} onPlannedChange={(v) => handleFixedChange('nájem', 'plánované', v)} onActualChange={(v) => handleFixedChange('nájem', 'skutečné', v)} />
-            <ExpenseRow label="Energie" planned={zsMonthlyFixedExpenses.items.energie.plánované || 0} actual={zsMonthlyFixedExpenses.items.energie.skutečné || 0} editable={editMode} onPlannedChange={(v) => handleFixedChange('energie', 'plánované', v)} onActualChange={(v) => handleFixedChange('energie', 'skutečné', v)} />
-            <ExpenseRow label="Telefon" planned={zsMonthlyFixedExpenses.items.telefon.plánované || 0} actual={zsMonthlyFixedExpenses.items.telefon.skutečné || 0} editable={editMode} onPlannedChange={(v) => handleFixedChange('telefon', 'plánované', v)} onActualChange={(v) => handleFixedChange('telefon', 'skutečné', v)} />
-            <ExpenseRow label="Internet" planned={zsMonthlyFixedExpenses.items.internet.plánované || 0} actual={zsMonthlyFixedExpenses.items.internet.skutečné || 0} editable={editMode} onPlannedChange={(v) => handleFixedChange('internet', 'plánované', v)} onActualChange={(v) => handleFixedChange('internet', 'skutečné', v)} />
-            <ExpenseRow label="Pojistky" planned={zsMonthlyFixedExpenses.items.pojistky.plánované || 0} actual={zsMonthlyFixedExpenses.items.pojistky.skutečné || 0} editable={editMode} onPlannedChange={(v) => handleFixedChange('pojistky', 'plánované', v)} onActualChange={(v) => handleFixedChange('pojistky', 'skutečné', v)} />
-            <ExpenseRow label="Splátky" planned={zsMonthlyFixedExpenses.items.splátky.plánované || 0} actual={zsMonthlyFixedExpenses.items.splátky.skutečné || 0} editable={editMode} onPlannedChange={(v) => handleFixedChange('splátky', 'plánované', v)} onActualChange={(v) => handleFixedChange('splátky', 'skutečné', v)} />
+            <ExpenseRow
+              label="Nájem"
+              planned={zsMonthlyFixedExpenses.items.nájem.plánované || 0}
+              actual={zsMonthlyFixedExpenses.items.nájem.skutečné || 0}
+              editable={editMode}
+              onPlannedChange={(v) => handleFixedChange('nájem', 'plánované', v)}
+              onActualChange={(v) => handleFixedChange('nájem', 'skutečné', v)}
+            />
+            <ExpenseRow
+              label="Energie"
+              planned={zsMonthlyFixedExpenses.items.energie.plánované || 0}
+              actual={zsMonthlyFixedExpenses.items.energie.skutečné || 0}
+              editable={editMode}
+              onPlannedChange={(v) => handleFixedChange('energie', 'plánované', v)}
+              onActualChange={(v) => handleFixedChange('energie', 'skutečné', v)}
+            />
+            <ExpenseRow
+              label="Telefon"
+              planned={zsMonthlyFixedExpenses.items.telefon.plánované || 0}
+              actual={zsMonthlyFixedExpenses.items.telefon.skutečné || 0}
+              editable={editMode}
+              onPlannedChange={(v) => handleFixedChange('telefon', 'plánované', v)}
+              onActualChange={(v) => handleFixedChange('telefon', 'skutečné', v)}
+            />
+            <ExpenseRow
+              label="Internet"
+              planned={zsMonthlyFixedExpenses.items.internet.plánované || 0}
+              actual={zsMonthlyFixedExpenses.items.internet.skutečné || 0}
+              editable={editMode}
+              onPlannedChange={(v) => handleFixedChange('internet', 'plánované', v)}
+              onActualChange={(v) => handleFixedChange('internet', 'skutečné', v)}
+            />
+            <ExpenseRow
+              label="Pojistky"
+              planned={zsMonthlyFixedExpenses.items.pojistky.plánované || 0}
+              actual={zsMonthlyFixedExpenses.items.pojistky.skutečné || 0}
+              editable={editMode}
+              onPlannedChange={(v) => handleFixedChange('pojistky', 'plánované', v)}
+              onActualChange={(v) => handleFixedChange('pojistky', 'skutečné', v)}
+            />
+            <ExpenseRow
+              label="Splátky"
+              planned={zsMonthlyFixedExpenses.items.splátky.plánované || 0}
+              actual={zsMonthlyFixedExpenses.items.splátky.skutečné || 0}
+              editable={editMode}
+              onPlannedChange={(v) => handleFixedChange('splátky', 'plánované', v)}
+              onActualChange={(v) => handleFixedChange('splátky', 'skutečné', v)}
+            />
           </>
         )}
       </Card>
@@ -180,13 +219,49 @@ export const MonthlyScreen: React.FC = () => {
       {/* VARIABILNÍ VÝDAJE */}
       <Card style={{ marginBottom: spacing.lg }}>
         <h2 style={{ color: colors.gold, marginBottom: spacing.md, fontSize: '16px' }}>🟠 VARIABILNÍ VÝDAJE</h2>
+
         {zsMonthlyVariableExpenses && (
           <>
-            <ExpenseRow label="Osobka" planned={zsMonthlyVariableExpenses.items.osobka.plánované || 0} actual={zsMonthlyVariableExpenses.items.osobka.skutečné || 0} editable={editMode} onPlannedChange={(v) => handleVariableChange('osobka', 'plánované', v)} onActualChange={(v) => handleVariableChange('osobka', 'skutečné', v)} />
-            <ExpenseRow label="Jídlo" planned={zsMonthlyVariableExpenses.items.jídlo.plánované || 0} actual={zsMonthlyVariableExpenses.items.jídlo.skutečné || 0} editable={editMode} onPlannedChange={(v) => handleVariableChange('jídlo', 'plánované', v)} onActualChange={(v) => handleVariableChange('jídlo', 'skutečné', v)} />
-            <ExpenseRow label="Doprava" planned={zsMonthlyVariableExpenses.items.doprava.plánované || 0} actual={zsMonthlyVariableExpenses.items.doprava.skutečné || 0} editable={editMode} onPlannedChange={(v) => handleVariableChange('doprava', 'plánované', v)} onActualChange={(v) => handleVariableChange('doprava', 'skutečné', v)} />
-            <ExpenseRow label="Škola" planned={zsMonthlyVariableExpenses.items.škola.plánované || 0} actual={zsMonthlyVariableExpenses.items.škola.skutečné || 0} editable={editMode} onPlannedChange={(v) => handleVariableChange('škola', 'plánované', v)} onActualChange={(v) => handleVariableChange('škola', 'skutečné', v)} />
-            <ExpenseRow label="Kroužky" planned={zsMonthlyVariableExpenses.items.kroužky.plánované || 0} actual={zsMonthlyVariableExpenses.items.kroužky.skutečné || 0} editable={editMode} onPlannedChange={(v) => handleVariableChange('kroužky', 'plánované', v)} onActualChange={(v) => handleVariableChange('kroužky', 'skutečné', v)} />
+            <ExpenseRow
+              label="Osobka"
+              planned={zsMonthlyVariableExpenses.items.osobka.plánované || 0}
+              actual={zsMonthlyVariableExpenses.items.osobka.skutečné || 0}
+              editable={editMode}
+              onPlannedChange={(v) => handleVariableChange('osobka', 'plánované', v)}
+              onActualChange={(v) => handleVariableChange('osobka', 'skutečné', v)}
+            />
+            <ExpenseRow
+              label="Jídlo"
+              planned={zsMonthlyVariableExpenses.items.jídlo.plánované || 0}
+              actual={zsMonthlyVariableExpenses.items.jídlo.skutečné || 0}
+              editable={editMode}
+              onPlannedChange={(v) => handleVariableChange('jídlo', 'plánované', v)}
+              onActualChange={(v) => handleVariableChange('jídlo', 'skutečné', v)}
+            />
+            <ExpenseRow
+              label="Doprava"
+              planned={zsMonthlyVariableExpenses.items.doprava.plánované || 0}
+              actual={zsMonthlyVariableExpenses.items.doprava.skutečné || 0}
+              editable={editMode}
+              onPlannedChange={(v) => handleVariableChange('doprava', 'plánované', v)}
+              onActualChange={(v) => handleVariableChange('doprava', 'skutečné', v)}
+            />
+            <ExpenseRow
+              label="Škola"
+              planned={zsMonthlyVariableExpenses.items.škola.plánované || 0}
+              actual={zsMonthlyVariableExpenses.items.škola.skutečné || 0}
+              editable={editMode}
+              onPlannedChange={(v) => handleVariableChange('škola', 'plánované', v)}
+              onActualChange={(v) => handleVariableChange('škola', 'skutečné', v)}
+            />
+            <ExpenseRow
+              label="Kroužky"
+              planned={zsMonthlyVariableExpenses.items.kroužky.plánované || 0}
+              actual={zsMonthlyVariableExpenses.items.kroužky.skutečné || 0}
+              editable={editMode}
+              onPlannedChange={(v) => handleVariableChange('kroužky', 'plánované', v)}
+              onActualChange={(v) => handleVariableChange('kroužky', 'skutečné', v)}
+            />
           </>
         )}
       </Card>
@@ -194,6 +269,7 @@ export const MonthlyScreen: React.FC = () => {
       {/* VÝSLEDEK */}
       <Card style={{ marginBottom: spacing.lg, backgroundColor: colors.blackSurface }}>
         <h2 style={{ color: colors.gold, marginBottom: spacing.md }}>📊 VÝSLEDEK</h2>
+
         <div style={{ marginBottom: spacing.md }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: spacing.sm }}>
             <span>Plánovaný výsledek:</span>
@@ -216,16 +292,42 @@ export const MonthlyScreen: React.FC = () => {
         </div>
       </Card>
 
-      {/* FIXNÍ TLAČÍTKO DOLE */}
-      <div style={{ position: 'fixed', bottom: '70px', left: spacing.md, right: spacing.md, zIndex: 100 }}>
-        <Button fullWidth onClick={handleToggleEdit}>
-          {editMode ? '✅ Uložit' : '✏️ Upravit'}
-        </Button>
-      </div>
+      {/* ACTION BUTTONS */}
+      <Button fullWidth onClick={() => setEditMode(!editMode)} style={{ marginBottom: spacing.md }}>
+        {editMode ? '✅ Uložit' : '✏️ Upravit'}
+      </Button>
+
+      {/* MODAL PRO KATEGORIE */}
+      <Modal isOpen={showCategoryModal} onClose={() => setShowCategoryModal(false)}>
+        <h2 style={{ marginBottom: spacing.md, color: colors.gold }}>➕ Přidat kategorii</h2>
+
+        <input
+          type="text"
+          value={newCategoryName}
+          onChange={(e) => setNewCategoryName(e.target.value)}
+          placeholder="Název kategorie"
+          style={{
+            width: '100%',
+            padding: spacing.sm,
+            backgroundColor: colors.blackCard,
+            border: `1px solid ${colors.border}`,
+            borderRadius: '4px',
+            color: colors.textPrimary,
+            marginBottom: spacing.md,
+            boxSizing: 'border-box',
+          }}
+        />
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.sm }}>
+          <Button onClick={handleAddCategory}>Přidat</Button>
+          <Button onClick={() => setShowCategoryModal(false)}>Zrušit</Button>
+        </div>
+      </Modal>
     </div>
   )
 }
 
+// Helper komponenty
 interface RowProps {
   label: string
   planned: number
@@ -245,17 +347,29 @@ const IncomeRow: React.FC<RowProps> = ({ label, planned, actual, editable, onPla
         <>
           <input
             type="number"
-            value={planned === 0 ? '' : planned}
-            onChange={(e) => onPlannedChange(e.target.value === '' ? 0 : Number(e.target.value))}
+            value={planned}
+            onChange={(e) => onPlannedChange(Number(e.target.value))}
             placeholder="Plánované"
-            style={{ padding: spacing.sm, backgroundColor: colors.blackCard, border: `1px solid ${colors.border}`, borderRadius: '4px', color: colors.textPrimary, width: '100%', boxSizing: 'border-box' }}
+            style={{
+              padding: spacing.sm,
+              backgroundColor: colors.blackCard,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '4px',
+              color: colors.textPrimary,
+            }}
           />
           <input
             type="number"
-            value={actual === 0 ? '' : actual}
-            onChange={(e) => onActualChange(e.target.value === '' ? 0 : Number(e.target.value))}
+            value={actual}
+            onChange={(e) => onActualChange(Number(e.target.value))}
             placeholder="Skutečné"
-            style={{ padding: spacing.sm, backgroundColor: colors.blackCard, border: `1px solid ${colors.border}`, borderRadius: '4px', color: colors.textPrimary, width: '100%', boxSizing: 'border-box' }}
+            style={{
+              padding: spacing.sm,
+              backgroundColor: colors.blackCard,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '4px',
+              color: colors.textPrimary,
+            }}
           />
         </>
       ) : (
@@ -278,17 +392,29 @@ const ExpenseRow: React.FC<RowProps> = ({ label, planned, actual, editable, onPl
         <>
           <input
             type="number"
-            value={planned === 0 ? '' : planned}
-            onChange={(e) => onPlannedChange(e.target.value === '' ? 0 : Number(e.target.value))}
+            value={planned}
+            onChange={(e) => onPlannedChange(Number(e.target.value))}
             placeholder="Plánované"
-            style={{ padding: spacing.sm, backgroundColor: colors.blackCard, border: `1px solid ${colors.border}`, borderRadius: '4px', color: colors.textPrimary, width: '100%', boxSizing: 'border-box' }}
+            style={{
+              padding: spacing.sm,
+              backgroundColor: colors.blackCard,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '4px',
+              color: colors.textPrimary,
+            }}
           />
           <input
             type="number"
-            value={actual === 0 ? '' : actual}
-            onChange={(e) => onActualChange(e.target.value === '' ? 0 : Number(e.target.value))}
+            value={actual}
+            onChange={(e) => onActualChange(Number(e.target.value))}
             placeholder="Skutečné"
-            style={{ padding: spacing.sm, backgroundColor: colors.blackCard, border: `1px solid ${colors.border}`, borderRadius: '4px', color: colors.textPrimary, width: '100%', boxSizing: 'border-box' }}
+            style={{
+              padding: spacing.sm,
+              backgroundColor: colors.blackCard,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '4px',
+              color: colors.textPrimary,
+            }}
           />
         </>
       ) : (
