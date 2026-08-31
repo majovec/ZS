@@ -4,7 +4,11 @@ import { useAppStore } from '@/store/appStore'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { ZSSavings, ZSInvestment } from '@/models/types'
-import { zsFirestoreService } from '@/services/zsFirestoreService'
+
+// Generuj ID bez extern závislostí
+const generateId = () => {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+}
 
 export const SavingsInvestmentScreen: React.FC = () => {
   const user = useAppStore((state) => state.user)
@@ -21,11 +25,11 @@ export const SavingsInvestmentScreen: React.FC = () => {
   const [investmentAmount, setInvestmentAmount] = useState('')
   const [investmentType, setInvestmentType] = useState<'nákup' | 'prodej'>('nákup')
 
-  const handleSaveSavings = async () => {
+  const handleSaveSavings = () => {
     if (!user) return
 
     const savings: ZSSavings = {
-      id: zsSavings?.id || crypto.randomUUID(),
+      id: zsSavings?.id || generateId(),
       userId: user.uid,
       month: zsCurrentMonth,
       plánované: savingsPlanned,
@@ -36,14 +40,13 @@ export const SavingsInvestmentScreen: React.FC = () => {
     }
 
     setZsSavings(savings)
-    try { await zsFirestoreService.saveSavings(user.uid, savings) } catch (error) { console.error('Uložení spoření selhalo:', error) }
   }
 
-  const handleAddInvestment = async () => {
+  const handleAddInvestment = () => {
     if (!investmentName || !investmentAmount || !user) return
 
     const investment: ZSInvestment = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       userId: user.uid,
       název: investmentName,
       počátek: Number(investmentAmount),
@@ -62,15 +65,8 @@ export const SavingsInvestmentScreen: React.FC = () => {
     }
 
     addZsInvestment(investment)
-    try { await zsFirestoreService.saveInvestment(user.uid, investment) } catch (error) { console.error('Uložení investice selhalo:', error) }
     setInvestmentName('')
     setInvestmentAmount('')
-  }
-
-  const handleDeleteInvestment = async (id: string) => {
-    if (!user) return
-    deleteZsInvestment(id)
-    try { await zsFirestoreService.deleteInvestment(user.uid, id) } catch (error) { console.error('Smazání investice selhalo:', error) }
   }
 
   const totalInvestments = zsInvestments.reduce((sum, inv) => sum + inv.bank, 0)
@@ -222,7 +218,7 @@ export const SavingsInvestmentScreen: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
                 <span style={{ fontWeight: 'bold' }}>{inv.název}</span>
                 <button
-                  onClick={() => void handleDeleteInvestment(inv.id)}
+                  onClick={() => deleteZsInvestment(inv.id)}
                   style={{
                     background: 'none',
                     border: 'none',
