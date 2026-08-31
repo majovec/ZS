@@ -7,7 +7,11 @@ import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { Modal } from '@/components/Modal'
 import { colors, spacing } from '@/theme/colors'
-import { v4 as uuidv4 } from 'uuid'
+
+// Generuj ID bez extern závislostí
+const generateId = () => {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+}
 
 interface AddTransactionProps {
   onComplete: () => void
@@ -54,7 +58,7 @@ export const AddTransaction: React.FC<AddTransactionProps> = ({ onComplete }) =>
 
     try {
       const newCategory: Category = {
-        id: uuidv4(),
+        id: generateId(),
         name: newCategoryName,
         type: newCategoryType,
         colorHex: colors.gold,
@@ -94,7 +98,7 @@ export const AddTransaction: React.FC<AddTransactionProps> = ({ onComplete }) =>
 
     try {
       const newTransaction: Transaction = {
-        id: uuidv4(),
+        id: generateId(),
         categoryId: selectedCategoryId,
         type,
         amount: Number(amount),
