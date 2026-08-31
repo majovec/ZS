@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { colors, spacing } from '@/theme/colors'
 import { useAppStore } from '@/store/appStore'
+import { CategoryType } from '@/models/types'
 import { Card } from '@/components/Card'
 import { Button } from '@/components/Button'
 import { Modal } from '@/components/Modal'
 
 export const MonthlyScreen: React.FC = () => {
-  const user = useAppStore((state) => state.user)
   const categories = useAppStore((state) => state.categories)
   const zsMonthlyIncome = useAppStore((state) => state.zsMonthlyIncome)
   const setZsMonthlyIncome = useAppStore((state) => state.setZsMonthlyIncome)
@@ -21,9 +21,7 @@ export const MonthlyScreen: React.FC = () => {
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
 
-  const incomeCategories = categories.filter((c) => c.type === 'INCOME')
-  const fixedCategories = categories.filter((c) => c.type === 'FIXED')
-  const variableCategories = categories.filter((c) => c.type === 'VARIABLE')
+  const incomeCategories = categories.filter((c) => c.type === CategoryType.INCOME)
 
   useEffect(() => {
     calculateZsMonthlySummary()
@@ -88,7 +86,7 @@ export const MonthlyScreen: React.FC = () => {
               fontSize: '12px',
             }}
           >
-            ➕ Kategorie
+            ➕ Kat.
           </button>
         </div>
 
