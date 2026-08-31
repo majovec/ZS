@@ -1,53 +1,129 @@
 import React, { useState } from 'react'
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-} from 'firebase/auth'
-import { auth } from '@/services/firebase'
-import { Input } from '@/components/Input'
-import { Button } from '@/components/Button'
-import { colors, spacing, typography } from '@/theme/colors'
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore'
+import { auth, db } from '@/services/firebase'
 import { useAppStore } from '@/store/appStore'
+import { DEFAULT_CATEGORIES } from '@/models/types'
+import { Button } from '@/components/Button'
+import { Card } from '@/components/Card'
+import { colors, spacing } from '@/theme/colors'
 
 export const LoginScreen: React.FC = () => {
+  const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [passwordConfirm, setPasswordConfirm] = useState('')
-  const [isRegister, setIsRegister] = useState(false)
-  const [error, setError] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const setUser = useAppStore((state) => state.setUser)
+  const setCategories = useAppStore((state) => state.setCategories)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+  const handleSignUp = async () => {
+    if (!email || !password || !displayName) {
+      setError('Vyplň všechna pole')
+      return
+    }
+
     setLoading(true)
+    setError('')
 
     try {
-      if (isRegister) {
-        if (password !== passwordConfirm) {
-          throw new Error('Hesla se neshodují')
-        }
-        if (password.length < 6) {
-          throw new Error('Heslo musí mít aspoň 6 znaků')
-        }
-        await createUserWithEmailAndPassword(auth, email, password)
-      } else {
-        await signInWithEmailAndPassword(auth, email, password)
-      }
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const newUser = userCredential.user
 
-      // Uživatel je přihlášen
-      if (auth.currentUser) {
-        setUser({
-          uid: auth.currentUser.uid,
-          email: auth.currentUser.email || '',
-          displayName: auth.currentUser.displayName || '',
-          createdAt: new Date(),
-        })
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Chyba při ověření')
+      // Ulož uživatele do Firestore
+      await addDoc(collection(db, 'users'), {
+        uid: newUser.uid,
+        email: newUser.email,
+        displayName: displayName,
+        createdAt: new Date(),
+      })
+
+      // Inicializuj DEFAULT_CATEGORIES
+      const categoriesRef = collection(db, 'users', newUser.uid, 'categories')
+      await Promise.all(
+        DEFAULT_CATEGORIES.map((cat) =>
+          addDoc(categoriesRef, {
+            name: cat.name,
+            type: cat.type,
+            colorHex: cat.colorHex,
+            icon: cat.icon,
+            isDefault: cat.isDefault,
+          })
+        )
+      )
+
+      // Ulož do store
+      setUser({
+        uid: newUser.uid,
+        email: newUser.email || '',
+        displayName: displayName,
+        createdAt: new Date(),
+      })
+
+      setCategories(DEFAULT_CATEGORIES)
+
+      // Resetuj formulář
+      setEmail('')
+      setPassword('')
+      setDisplayName('')
+      setIsSignUp(false)
+    } catch (err: any) {
+      setError(err.message || 'Chyba při registraci')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      setError('Vyplň všechna pole')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const authUser = userCredential.user
+
+      // Načti uživatele z Firestore
+      const usersQuery = query(
+        collection(db, 'users'),
+        where('uid', '==', authUser.uid)
+      )
+      const querySnapshot = await getDocs(usersQuery)
+      const userData = querySnapshot.docs[0]?.data()
+
+      // Načti kategorie
+      const categoriesQuery = await getDocs(
+        collection(db, 'users', authUser.uid, 'categories')
+      )
+      const categories = categoriesQuery.docs.map((doc) => ({
+        id: doc.id,
+        name: doc.data().name,
+        type: doc.data().type,
+        colorHex: doc.data().colorHex,
+        icon: doc.data().icon,
+        isDefault: doc.data().isDefault,
+      }))
+
+      setUser({
+        uid: authUser.uid,
+        email: authUser.email || '',
+        displayName: userData?.displayName || '',
+        createdAt: new Date(),
+      })
+
+      setCategories(categories)
+
+      // Resetuj formulář
+      setEmail('')
+      setPassword('')
+    } catch (err: any) {
+      setError(err.message || 'Chyba při přihlášení')
     } finally {
       setLoading(false)
     }
@@ -61,116 +137,122 @@ export const LoginScreen: React.FC = () => {
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: '100vh',
-        backgroundColor: colors.blackDeep,
         padding: spacing.md,
+        backgroundColor: colors.blackDeep,
       }}
     >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '400px',
-          textAlign: 'center',
-        }}
-      >
-        {/* Logo */}
-        <div
-          style={{
-            width: '80px',
-            height: '80px',
-            margin: '0 auto 32px',
-            borderRadius: '50%',
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: colors.gold,
-          }}
-        >
-          <img src={`${import.meta.env.BASE_URL}android_192x192.png`} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      <Card style={{ maxWidth: '400px', width: '100%' }}>
+        <div style={{ textAlign: 'center', marginBottom: spacing.lg }}>
+          <h1 style={{ color: colors.gold, marginBottom: spacing.sm }}>💰 Finance</h1>
+          <p style={{ color: colors.textSecondary }}>Znovu Silnější</p>
         </div>
 
-        <h1
-          style={{
-            color: colors.textPrimary,
-            marginBottom: spacing.sm,
-            ...typography.h2,
-          }}
-        >
-          Finance pod kontrolou
-        </h1>
-
-        <p
-          style={{
-            color: colors.textSecondary,
-            marginBottom: spacing.lg,
-          }}
-        >
-          {isRegister ? 'Vytvoř si účet' : 'Přihlas se'}
-        </p>
-
-        <form onSubmit={handleSubmit}>
-          <Input
-            type="email"
-            label="E-mail"
-            placeholder="tvoje@email.cz"
-            value={email}
-            onChange={setEmail}
-          />
-
-          <Input
-            type="password"
-            label="Heslo"
-            placeholder="Aspoň 6 znaků"
-            value={password}
-            onChange={setPassword}
-          />
-
-          {isRegister && (
-            <Input
-              type="password"
-              label="Potvrdi heslo"
-              placeholder="Zopakuj heslo"
-              value={passwordConfirm}
-              onChange={setPasswordConfirm}
-            />
-          )}
-
-          {error && (
-            <div
-              style={{
-                marginBottom: spacing.md,
-                padding: spacing.md,
-                backgroundColor: colors.redExpense,
-                borderRadius: '8px',
-                color: colors.textPrimary,
-                fontSize: '14px',
-              }}
-            >
-              {error}
-            </div>
-          )}
-
-          <Button
-            type="submit"
-            fullWidth
-            loading={loading}
-            style={{ marginBottom: spacing.md }}
+        {error && (
+          <div
+            style={{
+              backgroundColor: colors.redExpense,
+              color: 'white',
+              padding: spacing.md,
+              borderRadius: '4px',
+              marginBottom: spacing.md,
+            }}
           >
-            {isRegister ? 'Zaregistrovat se' : 'Přihlásit se'}
-          </Button>
-        </form>
+            {error}
+          </div>
+        )}
+
+        <div style={{ marginBottom: spacing.md }}>
+          <label style={{ display: 'block', marginBottom: spacing.sm, fontSize: '12px' }}>
+            Email
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="tvůj@email.com"
+            style={{
+              width: '100%',
+              padding: spacing.sm,
+              backgroundColor: colors.blackCard,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '4px',
+              color: colors.textPrimary,
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: spacing.md }}>
+          <label style={{ display: 'block', marginBottom: spacing.sm, fontSize: '12px' }}>
+            Heslo
+          </label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            style={{
+              width: '100%',
+              padding: spacing.sm,
+              backgroundColor: colors.blackCard,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '4px',
+              color: colors.textPrimary,
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        {isSignUp && (
+          <div style={{ marginBottom: spacing.md }}>
+            <label style={{ display: 'block', marginBottom: spacing.sm, fontSize: '12px' }}>
+              Jméno
+            </label>
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Tvoje jméno"
+              style={{
+                width: '100%',
+                padding: spacing.sm,
+                backgroundColor: colors.blackCard,
+                border: `1px solid ${colors.border}`,
+                borderRadius: '4px',
+                color: colors.textPrimary,
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+        )}
 
         <Button
-          variant="secondary"
           fullWidth
+          onClick={isSignUp ? handleSignUp : handleSignIn}
+          disabled={loading}
+          style={{ marginBottom: spacing.md }}
+        >
+          {loading ? '⏳ Čekej...' : isSignUp ? '📝 Registrovat' : '🔓 Přihlásit'}
+        </Button>
+
+        <button
           onClick={() => {
-            setIsRegister(!isRegister)
+            setIsSignUp(!isSignUp)
             setError('')
           }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: colors.gold,
+            cursor: 'pointer',
+            fontSize: '14px',
+            width: '100%',
+            textAlign: 'center',
+          }}
         >
-          {isRegister ? 'Už mám účet' : 'Nemám účet'}
-        </Button>
-      </div>
+          {isSignUp ? '👤 Máš účet? Přihlaš se' : '📝 Nemáš účet? Zaregistruj se'}
+        </button>
+      </Card>
     </div>
   )
 }
