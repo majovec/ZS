@@ -4,20 +4,18 @@ interface GemmaMessage {
 }
 
 class GemmaService {
-  // Never ship provider secrets in the browser bundle. Configure an authenticated
-  // backend proxy through VITE_AI_ENDPOINT instead.
-  private get endpoint(): string {
-    return (import.meta.env.VITE_AI_ENDPOINT || '').replace(/\/$/, '')
-  }
-
   private conversationHistory: GemmaMessage[] = []
   private lastStatus = 'Připraveno (Limit: 15 zpráv/den)'
   private readonly MAX_DAILY_MESSAGES = 15
 
+  private get apiKey(): string {
+    return import.meta.env.VITE_GEMINI_API_KEY || ''
+  }
+
   async initialize(): Promise<void> {
-    if (!this.endpoint) {
-      this.lastStatus = 'Základní režim (AI server není nastaven)'
-      return
+    if (!this.apiKey) {
+      console.warn('⚠️ GEMINI_API_KEY není nastaven!')
+      this.lastStatus = 'API klíč chybí'
     } else {
       this.lastStatus = 'Připraveno'
     }
@@ -49,10 +47,10 @@ class GemmaService {
     }
   }
 
-  async chat(userMessage: string, appData?: any): Promise<string> {
+  async chat(userMessage: string): Promise<string> {
     try {
-      if (!this.endpoint) {
-        throw new Error('AI server není nakonfigurován')
+      if (!this.apiKey) {
+        return '❌ API klíč není nastaven. Kontaktuj administrátora.'
       }
 
       if (userMessage.trim() === '/status') {
@@ -65,70 +63,40 @@ class GemmaService {
         return `🛑 Vyčerpal/a jsi svůj dnešní bezplatný limit ${this.MAX_DAILY_MESSAGES} zpráv. Pokračovat můžeš zase zítra! 💪`
       }
 
-      // Do historie ukládáme čistou zprávu uživatele
-      this.conversationHistory.push({
-        role: 'user',
-        content: userMessage,
-      })
-
       const contents = this.conversationHistory.map((msg) => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: msg.content }],
       }))
 
-      let contextString = ''
-      if (appData) {
-        contextString = `\n\nAktuální data uživatele z aplikace:\n${JSON.stringify(appData, null, 2)}`
-      }
+      const promptWithPersona = `Jsi přátelský český finanční poradce pomáhající lidem s dluhy. Odpovídej věcně, stručně a lidsky. Uživatel píše: ${userMessage}`
 
-      // Přidáme systémový kontext jako poslední instrukci, aniž bychom tím špinili trvalou historii
-      const fullContents = [
-        ...contents.slice(0, -1),
-        {
-          role: 'user',
-          parts: [{ text: `Jsi přátelský český finanční poradce pomáhající lidem s dluhy a financemi. Odpovídej věcně, stručně a lidsky. Máш k dispozici data uživatele z aplikace.${contextString}\n\nUživatel píše: ${userMessage}` }]
-        }
-      ]
+      contents.push({
+        role: 'user',
+        parts: [{ text: promptWithPersona }],
+      })
 
-      // Použijeme lehčí, rychlý a stabilní lite model
-      const url = this.endpoint
+      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`
 
-      let response: Response | null = null
-      let attempts = 0
-      const maxAttempts = 3
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ contents }),
+      })
 
-      while (attempts < maxAttempts) {
-        attempts++
-        response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ contents: fullContents }),
-        })
-
-        if (response.status === 503 && attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 1500))
-          continue
-        }
-        break
-      }
-
-      if (!response || !response.ok) {
-        const errorData = response ? await response.json().catch(() => ({})) : {}
+      if (!response.ok) {
+        const errorData = await response.json()
         console.error('Gemini API Error:', errorData)
 
-        if (response?.status === 429) {
+        if (response.status === 429) {
           return '⏸️ Příliš mnoho požadavků. Počkej chvíli a zkus znovu.'
         }
-        if (response?.status === 503) {
-          return '🔄 Server je momentálně vytížený. Zkus prosím odeslat zprávu za chvíli znovu.'
-        }
-        if (response?.status === 401) {
+        if (response.status === 401) {
           return '🔑 Chyba autentizace. API klíč je neplatný.'
         }
 
-        throw new Error(`API Error (${response?.status || 'Neznámá'}): ${errorData?.error?.message || 'Neznámá chyba'}`)
+        throw new Error(`API Error (${response.status}): ${errorData?.error?.message || 'Neznámá chyba'}`)
       }
 
       const data = await response.json()
@@ -136,13 +104,17 @@ class GemmaService {
         data?.candidates?.[0]?.content?.parts?.[0]?.text ||
         'Omlouvám se, na tohle nedokážu odpovědět.'
 
-      // Do historie asistenta uložíme čistou odpověď AI (bez počitadla, aby se to řetězením nekazilo)
       this.conversationHistory.push({
-        role: 'assistant',
-        content: responseText,
+        role: 'user',
+        content: userMessage,
       })
 
       const finalResponse = `${responseText}\n\n_(Zbývajících zpráv dnes: ${limitCheck.remaining})_`
+
+      this.conversationHistory.push({
+        role: 'assistant',
+        content: finalResponse,
+      })
 
       return finalResponse
     } catch (error: any) {
@@ -160,7 +132,7 @@ class GemmaService {
   }
 
   isReady(): boolean {
-    return !!this.endpoint
+    return !!this.apiKey
   }
 
   getLoadingStatus(): string {
