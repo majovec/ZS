@@ -1,100 +1,133 @@
-import React, { useState, useEffect } from 'react'
-import { colors, spacing } from '@/theme/colors'
+import React, { useState } from 'react'
+import { collection, addDoc } from 'firebase/firestore'
+import { db } from '@/services/firebase'
 import { useAppStore } from '@/store/appStore'
-import { categoriesService, transactionsService } from '@/services/firestoreService'
-import { ocrService } from '@/services/ocrService'
-import { Input } from '@/components/Input'
+import { Category, Transaction, TransactionType, TransactionSource, CategoryType } from '@/models/types'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
-import { TransactionType, TransactionSource } from '@/models/types'
+import { Modal } from '@/components/Modal'
+import { colors, spacing } from '@/theme/colors'
+import { v4 as uuidv4 } from 'uuid'
 
-export const AddTransaction: React.FC<{
+interface AddTransactionProps {
   onComplete: () => void
-}> = ({ onComplete }) => {
+}
+
+export const AddTransaction: React.FC<AddTransactionProps> = ({ onComplete }) => {
   const user = useAppStore((state) => state.user)
   const categories = useAppStore((state) => state.categories)
+  const setTransactions = useAppStore((state) => state.setTransactions)
+  const transactions = useAppStore((state) => state.transactions)
   const setCategories = useAppStore((state) => state.setCategories)
-  
+
   const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE)
-  const [categoryId, setCategoryId] = useState('')
+  const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [ocrResult, setOcrResult] = useState<any>(null)
-  const [showOcrResult, setShowOcrResult] = useState(false)
 
-  useEffect(() => {
-    const loadOrCreateCategories = async () => {
-      if (user) {
-        try {
-          const fetched = await categoriesService.getCategories(user.uid)
-          setCategories(fetched)
-        } catch (err) {
-          console.error('Chyba při načítání kategorií:', err)
-        }
-      }
+  // Modal pro novou kategorii
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [newCategoryType, setNewCategoryType] = useState<CategoryType>(CategoryType.VARIABLE)
+
+  const filteredCategories = categories.filter((cat) => {
+    if (type === TransactionType.INCOME) return cat.type === CategoryType.INCOME
+    if (type === TransactionType.EXPENSE) {
+      return (
+        cat.type === CategoryType.FIXED ||
+        cat.type === CategoryType.VARIABLE ||
+        cat.type === CategoryType.UNEXPECTED
+      )
     }
-    loadOrCreateCategories()
-  }, [user, setCategories])
+    return false
+  })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+  const handleCreateCategory = async () => {
+    if (!newCategoryName || !user) {
+      setError('Vyplň název kategorie')
+      return
+    }
+
     setLoading(true)
 
     try {
-      if (!user) throw new Error('Uživatel není přihlášen')
-      if (!categoryId) throw new Error('Vyber kategorii')
-      if (!amount) throw new Error('Vyplň částku')
+      const newCategory: Category = {
+        id: uuidv4(),
+        name: newCategoryName,
+        type: newCategoryType,
+        colorHex: colors.gold,
+        icon: 'tag',
+        isDefault: false,
+      }
 
-      await transactionsService.addTransaction(user.uid, {
-        categoryId,
+      // Ulož do Firestore
+      await addDoc(
+        collection(db, 'users', user.uid, 'categories'),
+        newCategory
+      )
+
+      // Přidej do store
+      setCategories([...categories, newCategory])
+      setSelectedCategoryId(newCategory.id)
+
+      // Zavři modal
+      setShowCategoryModal(false)
+      setNewCategoryName('')
+      setNewCategoryType(CategoryType.VARIABLE)
+    } catch (err: any) {
+      setError(err.message || 'Chyba při vytvoření kategorie')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddTransaction = async () => {
+    if (!selectedCategoryId || !amount || !user) {
+      setError('Vyplň všechna pole')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const newTransaction: Transaction = {
+        id: uuidv4(),
+        categoryId: selectedCategoryId,
         type,
-        amount: parseFloat(amount),
+        amount: Number(amount),
         note,
         date: new Date(),
         source: TransactionSource.MANUAL,
         createdAt: new Date(),
-      })
+      }
 
+      // Ulož do Firestore
+      await addDoc(
+        collection(db, 'users', user.uid, 'transactions'),
+        {
+          ...newTransaction,
+          date: newTransaction.date.toISOString(),
+          createdAt: newTransaction.createdAt.toISOString(),
+        }
+      )
+
+      // Přidej do store
+      setTransactions([...transactions, newTransaction])
+
+      // Resetuj a zavři
+      setSelectedCategoryId('')
+      setAmount('')
+      setNote('')
       onComplete()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Chyba')
+    } catch (err: any) {
+      setError(err.message || 'Chyba při přidání transakce')
     } finally {
       setLoading(false)
     }
   }
-
-  const handleOCR = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    try {
-      setLoading(true)
-      const result = await ocrService.processReceiptImage(file)
-      setOcrResult(result)
-      setShowOcrResult(true)
-    } catch (err) {
-      setError('Chyba při zpracování obrázku')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const applyOcrResult = () => {
-    if (ocrResult) {
-      if (ocrResult.amount) setAmount(ocrResult.amount.toString())
-      setNote(ocrResult.merchant || '')
-      if (ocrResult.suggestedCategory) setCategoryId(ocrResult.suggestedCategory)
-      setShowOcrResult(false)
-    }
-  }
-
-  const filteredCategories =
-    type === TransactionType.INCOME
-      ? categories.filter((c) => c.type === 'income')
-      : categories.filter((c) => c.type !== 'income')
 
   return (
     <div
@@ -105,186 +138,223 @@ export const AddTransaction: React.FC<{
         color: colors.textPrimary,
       }}
     >
-      <h1 style={{ marginBottom: spacing.lg }}>Nový zápis</h1>
+      <div style={{ marginBottom: spacing.lg }}>
+        <h1 style={{ marginBottom: spacing.md }}>➕ Nový zápis</h1>
 
-      <div
-        style={{
-          display: 'flex',
-          gap: spacing.sm,
-          marginBottom: spacing.lg,
-        }}
-      >
-        <Button
-          variant={type === TransactionType.INCOME ? 'primary' : 'secondary'}
-          onClick={() => setType(TransactionType.INCOME)}
-          fullWidth
-        >
-          Příjem
-        </Button>
-        <Button
-          variant={type === TransactionType.EXPENSE ? 'primary' : 'secondary'}
-          onClick={() => setType(TransactionType.EXPENSE)}
-          fullWidth
-        >
-          Výdaj
-        </Button>
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        <label
-          style={{
-            display: 'block',
-            marginBottom: spacing.sm,
-            color: colors.textSecondary,
-            fontSize: '14px',
-            fontWeight: '500',
-          }}
-        >
-          Kategorie
-        </label>
-
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          style={{
-            width: '100%',
-            padding: `${spacing.sm} ${spacing.md}`,
-            backgroundColor: colors.blackSurface,
-            border: `1px solid ${colors.border}`,
-            borderRadius: '8px',
-            color: colors.textPrimary,
-            marginBottom: spacing.md,
-            fontFamily: 'inherit',
-          }}
-        >
-          <option value="">Vyber kategorii</option>
-          {filteredCategories.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
-
-        <Input
-          type="number"
-          label="Částka (Kč)"
-          placeholder="0"
-          value={amount}
-          onChange={setAmount}
-        />
-
-        <Input
-          type="text"
-          label="Poznámka"
-          placeholder="Náklady na..."
-          value={note}
-          onChange={setNote}
-        />
-
-        <label
-          style={{
-            display: 'block',
-            marginBottom: spacing.md,
-          }}
-        >
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleOCR}
-            style={{ display: 'none' }}
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            fullWidth
+        {/* TYPE SELECTOR */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.md, marginBottom: spacing.lg }}>
+          <button
             onClick={() => {
-              const input = document.querySelector(
-                'input[type="file"]'
-              ) as HTMLInputElement
-              input?.click()
+              setType(TransactionType.INCOME)
+              setSelectedCategoryId('')
+            }}
+            style={{
+              padding: spacing.md,
+              backgroundColor: type === TransactionType.INCOME ? colors.gold : colors.blackCard,
+              color: type === TransactionType.INCOME ? colors.blackDeep : colors.textPrimary,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '16px',
             }}
           >
-            📷 Naskenovat účtenku
-          </Button>
-        </label>
+            💰 Příjem
+          </button>
+          <button
+            onClick={() => {
+              setType(TransactionType.EXPENSE)
+              setSelectedCategoryId('')
+            }}
+            style={{
+              padding: spacing.md,
+              backgroundColor: type === TransactionType.EXPENSE ? colors.gold : colors.blackCard,
+              color: type === TransactionType.EXPENSE ? colors.blackDeep : colors.textPrimary,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '16px',
+            }}
+          >
+            💸 Výdaj
+          </button>
+        </div>
+      </div>
 
+      <Card style={{ marginBottom: spacing.lg }}>
         {error && (
           <div
             style={{
-              marginBottom: spacing.md,
-              padding: spacing.md,
               backgroundColor: colors.redExpense,
-              borderRadius: '8px',
-              color: colors.textPrimary,
-              fontSize: '14px',
+              color: 'white',
+              padding: spacing.md,
+              borderRadius: '4px',
+              marginBottom: spacing.md,
             }}
           >
             {error}
           </div>
         )}
 
-        <Button type="submit" fullWidth loading={loading}>
-          Přidat
-        </Button>
-      </form>
-
-      {showOcrResult && ocrResult && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-        >
-          <Card
-            style={{
-              maxWidth: '300px',
-              padding: spacing.lg,
-            }}
-          >
-            <h2 style={{ marginBottom: spacing.md }}>Výsledek skenování</h2>
-
-            <p>
-              <strong>Obchod:</strong> {ocrResult.merchant}
-            </p>
-
-            <p>
-              <strong>Částka:</strong> {ocrResult.amount} Kč
-            </p>
-
-            <p style={{ fontSize: '12px', color: colors.textSecondary }}>
-              Důvěra: {Math.round(ocrResult.confidence * 100)}%
-            </p>
-
-            <div
+        {/* KATEGORIE */}
+        <div style={{ marginBottom: spacing.md }}>
+          <label style={{ display: 'block', marginBottom: spacing.sm, fontSize: '12px' }}>
+            Kategorie
+          </label>
+          <div style={{ display: 'flex', gap: spacing.sm }}>
+            <select
+              value={selectedCategoryId}
+              onChange={(e) => setSelectedCategoryId(e.target.value)}
               style={{
-                display: 'flex',
-                gap: spacing.sm,
-                marginTop: spacing.lg,
+                flex: 1,
+                padding: spacing.sm,
+                backgroundColor: colors.blackCard,
+                border: `1px solid ${colors.border}`,
+                borderRadius: '4px',
+                color: colors.textPrimary,
               }}
             >
-              <Button fullWidth onClick={applyOcrResult}>
-                Použít
-              </Button>
+              <option value="">-- Vyber kategorii --</option>
+              {filteredCategories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
 
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={() => setShowOcrResult(false)}
-              >
-                Storno
-              </Button>
-            </div>
-          </Card>
+            <button
+              onClick={() => setShowCategoryModal(true)}
+              style={{
+                padding: spacing.sm,
+                backgroundColor: colors.gold,
+                color: colors.blackDeep,
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontSize: '16px',
+              }}
+            >
+              ➕
+            </button>
+          </div>
         </div>
-      )}
+
+        {/* ČÁSTKA */}
+        <div style={{ marginBottom: spacing.md }}>
+          <label style={{ display: 'block', marginBottom: spacing.sm, fontSize: '12px' }}>
+            Částka (Kč)
+          </label>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0"
+            style={{
+              width: '100%',
+              padding: spacing.sm,
+              backgroundColor: colors.blackCard,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '4px',
+              color: colors.textPrimary,
+              boxSizing: 'border-box',
+              fontSize: '16px',
+            }}
+          />
+        </div>
+
+        {/* POZNÁMKA */}
+        <div style={{ marginBottom: spacing.md }}>
+          <label style={{ display: 'block', marginBottom: spacing.sm, fontSize: '12px' }}>
+            Poznámka
+          </label>
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Co jsi koupil?"
+            style={{
+              width: '100%',
+              padding: spacing.sm,
+              backgroundColor: colors.blackCard,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '4px',
+              color: colors.textPrimary,
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        {/* AKCE */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.sm }}>
+          <Button onClick={handleAddTransaction} disabled={loading}>
+            {loading ? '⏳ Ukládám...' : '💾 Přidat'}
+          </Button>
+          <Button onClick={onComplete} disabled={loading}>
+            ✕ Zrušit
+          </Button>
+        </div>
+      </Card>
+
+      {/* MODAL PRO NOVOU KATEGORII */}
+      <Modal isOpen={showCategoryModal} onClose={() => setShowCategoryModal(false)}>
+        <h2 style={{ marginBottom: spacing.md, color: colors.gold }}>➕ Nová kategorie</h2>
+
+        <div style={{ marginBottom: spacing.md }}>
+          <label style={{ display: 'block', marginBottom: spacing.sm, fontSize: '12px' }}>
+            Název
+          </label>
+          <input
+            type="text"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            placeholder="Název kategorie"
+            style={{
+              width: '100%',
+              padding: spacing.sm,
+              backgroundColor: colors.blackCard,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '4px',
+              color: colors.textPrimary,
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: spacing.md }}>
+          <label style={{ display: 'block', marginBottom: spacing.sm, fontSize: '12px' }}>
+            Typ
+          </label>
+          <select
+            value={newCategoryType}
+            onChange={(e) => setNewCategoryType(e.target.value as CategoryType)}
+            style={{
+              width: '100%',
+              padding: spacing.sm,
+              backgroundColor: colors.blackCard,
+              border: `1px solid ${colors.border}`,
+              borderRadius: '4px',
+              color: colors.textPrimary,
+              boxSizing: 'border-box',
+            }}
+          >
+            <option value={CategoryType.INCOME}>💰 Příjem</option>
+            <option value={CategoryType.FIXED}>🔴 Fixní výdaj</option>
+            <option value={CategoryType.VARIABLE}>🟠 Variabilní výdaj</option>
+            <option value={CategoryType.UNEXPECTED}>🟣 Nečekaný výdaj</option>
+          </select>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing.sm }}>
+          <Button onClick={handleCreateCategory} disabled={loading}>
+            {loading ? '⏳ Vytvářím...' : '✅ Vytvořit'}
+          </Button>
+          <Button onClick={() => setShowCategoryModal(false)} disabled={loading}>
+            ✕ Zrušit
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }
